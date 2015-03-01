@@ -67,21 +67,20 @@ midiToBinaryVec = function(filename)
     array_row = 128 -- The number of midis notes, this can be made better.
 
     -- need to allocate array to feeat everything into
-    local binVector = allocate_array(array_row,array_col)
-
+    --local binVector = allocate_array(array_row,array_col)
+    local binVector = torch.Tensor(array_row,array_col):zero()
     -- fit all notes
     for k,n in pairs(notes)
     do 
     local fr = (n[2])/(min) + 1
-    local to = (n[2]+n[3])/(min) + 1
+    local to = (n[2]+n[3])/(min)
     local note = n[5]
 
     for i=fr,to do
     binVector[note][i] = 1
     end
     end 
-
-    binVector = torch.Tensor(binVector)
+    --binVector2 = torch.Tensor(binVector)
     f:close()
     return binVector
 end
