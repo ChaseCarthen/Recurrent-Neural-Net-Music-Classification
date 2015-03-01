@@ -1,7 +1,7 @@
 local midi = require "midi"
-
+local torch = require "torch"
 --print(midi)
-
+torch.setdefaulttensortype('torch.FloatTensor')
 allocate_array = function(row_size,col_size)
    local out = {}
    for i=1,row_size do
@@ -61,7 +61,8 @@ midiToBinaryVec = function(filename)
 
     print(max,min)
     print(#notes)
-    printBinaryVector(binVector)
+    --printBinaryVector(binVector)
+    print(torch.Tensor(binVector))
     f:close()
 end
 
@@ -76,4 +77,5 @@ printBinaryVector = function(binVec)
       s = ""
    end
 end
-midiToBinaryVec("outf200.mid") 
+
+--midiToBinaryVec("./music/jazz/bags_groove_jh.mid") 
