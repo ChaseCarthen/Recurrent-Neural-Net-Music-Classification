@@ -10,9 +10,9 @@ obj =
 }
 
 counter = 0.
-for filename in lfs.dir("./music/classical") 
-    do print ("./music/classical/"..filename) 
+for filename in lfs.dir("./music/jazz") 
+    do print ("./music/jazz/"..filename) 
     if string.find(filename, ".mid")
-    then obj.Songs[filename] = midiToBinaryVec("./music/classical/"..filename)  
+    then obj.Songs[filename] = midiToBinaryVec("./music/jazz/"..filename)  
     end
 end
