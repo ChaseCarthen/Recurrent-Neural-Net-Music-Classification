@@ -77,7 +77,8 @@ midiToBinaryVec = function(filename)
     local note = n[5]
     local intensity = n[6]
     for i=fr,to do
-    binVector[note][i] = (intensity / 100)
+    binVector[note][i] = (intensity / 128)
+    --if(intensity/100~=.96) then print(intensity/128) end
     end
     end 
     --binVector2 = torch.Tensor(binVector)
