@@ -24,6 +24,10 @@ midiToBinaryVec
 input: Takes in a filename 
 output: spits out a torch float tensor.
 --]]
+
+    setIntensity = function(binVector,note,i,intensity)
+  binVector[note][i] = (intensity / 128)
+end
 midiToBinaryVec = function(filename)
     -- read the file
     local f = assert(io.open(filename, "r"))
@@ -65,26 +69,45 @@ midiToBinaryVec = function(filename)
     array_col = total_ticks/min
 
     array_row = 128 -- The number of midis notes, this can be made better.
-
+    f:close()
     -- need to allocate array to feeat everything into
     --local binVector = allocate_array(array_row,array_col)
     local binVector = torch.Tensor(array_row,array_col):zero()
+    print("NOTES: " .. #notes)
+    --print(notes)
+    ma = require "math"
     -- fit all notes
+
     for k,n in pairs(notes)
-    do 
-    local fr = (n[2])/(min) + 1
-    local to = (n[2]+n[3])/(min)
-    local note = n[5]
+    do
+    --print(k)
+    --print(n) 
+    local fr = ma.min((n[2])/(min) + 1,array_col)
+    local to = ma.min((n[2]+n[3])/(min)+1,array_col)
+    local note = ma.min(ma.max(n[5],0),128)
     local intensity = n[6]
+    --print(binVector[note])
     for i=fr,to do
-    binVector[note][i] = (intensity / 128)
+    ok,err = pcall(setIntensity,binVector, note, i, intensity)
+    if( not ok)
+
+   then
+      print ("ERROR: ")
+    print(err)
+    print(ok)
+   return nil
+  else
+   --print ("Okay: ")
+   break 
+  end
     --if(intensity/100~=.96) then print(intensity/128) end
     end
     end 
     --binVector2 = torch.Tensor(binVector)
-    f:close()
+    
     return binVector
 end
+
 
 -- A simple test print function for printing out the table representation
 printBinaryVector = function(binVec)
