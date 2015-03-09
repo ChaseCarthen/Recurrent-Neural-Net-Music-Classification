@@ -73,7 +73,7 @@ midiToBinaryVec = function(filename)
     -- need to allocate array to feeat everything into
     --local binVector = allocate_array(array_row,array_col)
     local binVector = torch.Tensor(array_row,array_col):zero()
-    print("NOTES: " .. #notes)
+    --print("NOTES: " .. #notes)
     --print(notes)
     ma = require "math"
     -- fit all notes
