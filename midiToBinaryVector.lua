@@ -26,7 +26,9 @@ output: spits out a torch float tensor.
 --]]
 
     setIntensity = function(binVector,note,i,intensity)
-  binVector[note][i] = (intensity / 128)
+  binVector[note][i] = (intensity )--/ 128)
+  --if(binVector[note])
+  --print(binVector[note][i])
 end
 midiToBinaryVec = function(filename)
     --print(filename)
@@ -67,7 +69,7 @@ midiToBinaryVec = function(filename)
     end
     end
     -- determing the overall array length using total ticks / smallest furation
-    array_col = total_ticks/min
+    array_col = total_ticks/50
 
     array_row = 128 -- The number of midis notes, this can be made better.
     f:close()

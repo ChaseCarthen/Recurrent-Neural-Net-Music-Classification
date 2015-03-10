@@ -51,9 +51,10 @@ function GatherMidiData(BaseDir)
             do FullFilePath = BaseDir.."/"..directoryName.."/"..filename
                 if string.find(filename, ".mid")
                 then 
-                    fileCounter = fileCounter + 1 
+                    
                     data = midiToBinaryVec(FullFilePath) 
                     if data ~= nil then
+                        fileCounter = fileCounter + 1 
                         obj.Songs[fileCounter] = data
                     end
                 end
