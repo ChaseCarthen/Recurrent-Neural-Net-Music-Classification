@@ -29,6 +29,7 @@ output: spits out a torch float tensor.
   binVector[note][i] = (intensity / 128)
 end
 midiToBinaryVec = function(filename)
+    --print(filename)
     -- read the file
     local f = assert(io.open(filename, "r"))
     local t = f:read("*all")
