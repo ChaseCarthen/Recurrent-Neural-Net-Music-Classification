@@ -56,6 +56,9 @@ function GatherMidiData(BaseDir)
                     if data ~= nil then
                         fileCounter = fileCounter + 1 
                         obj.Songs[fileCounter] = data
+                       --print("DATA: ")
+                        --print(data)
+                        --print(data:size())
                     end
                 end
             end
@@ -85,6 +88,9 @@ function SplitMidiData(data, ratio)
             
         for i=1,numTrain do
           TrainingCounter = TrainingCounter + 1
+          --print(#data[genreKey].Songs)
+          --print(i)
+          --print(genreKey)
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
           trainData.Labels[TrainingCounter] = classifier[genreKey]
         end
