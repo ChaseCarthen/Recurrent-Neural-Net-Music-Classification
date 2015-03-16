@@ -10,23 +10,23 @@ require 'lfs'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./miniMusic", .5)
+trainData, testData, classes = GetTrainAndTestData("./music", .8)
 
 
 --Step 2: Create the model
 inp = 128;  -- dimensionality of one sequence element 
 outp = 32; -- number of derived features for one sequence element
-kw = 128;   -- kernel only operates on one sequence element at once
-dw = 128;   -- we step once and go on to the next sequence element
+kw = 32;   -- kernel only operates on one sequence element at once
+dw = 16;   -- we step once and go on to the next sequence element
 spl = 128 -- split constant
 --print(nn)
 mlp=nn.Sequential()
 mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
 mlp:add(nn.Reshape(inp))
-mlp:add(nn.HardTanh())
-mlp:add(nn.Linear(128,128))
-mlp:add(nn.HardTanh())
-mlp:add(nn.Linear(128,#classes))
+mlp:add(nn.Tanh())
+mlp:add(nn.Linear(128,32))
+mlp:add(nn.ReLU())
+mlp:add(nn.Linear(32,#classes))
 mlp:add(nn.LogSoftMax())
 --mlp:add(nn.Square())
 mlp:add(nn.Sum(1))
@@ -85,16 +85,21 @@ function train()
    shuffle = torch.randperm(trainData:size())
 
     
-   for t = 1, trainData:size() do
+   for t = 1, trainData:size(),64 do
    
-       
+      xlua.progress(t, trainData:size())  
       local inputs = {}
-      inputs[1] = trainData.Songs[shuffle[t]]
+      
       --print(inputs[0]:size(2))
       local targets = {}
-      targets[1] = trainData.Labels[shuffle[t]]
-        
-        
+      for s=0,64
+      do
+      if t+s > trainData:size() then
+      break
+      end
+      inputs[s] = trainData.Songs[shuffle[t+s]]
+      targets[s] = trainData.Labels[shuffle[t+s]]
+      end  
         
         
     --print(inputs)
@@ -143,16 +148,16 @@ function train()
                        -- normalize gradients and f(X)
                        gradParameters:div(spl_counter)
                        f = f/spl_counter
-
+                       print(spl_counter)
                        --print("Returning from feval")
                        -- return f and df/dX
                        return f,gradParameters
                     end
 
-                   config = {learningRate = 0.003, weightDecay = 0.01, 
-      momentum = 0.01, learningRateDecay = 5e-7}
+                   --config = {learningRate = 0.003, weightDecay = 0.01, 
+      ---momentum = 0.01, learningRateDecay = 5e-7}
         --print("Before optim.sgd")
-        optim.sgd(feval, parameters, config)
+        optim.sgd(feval, parameters, optimState)
         --print("After optim.sgd")
    end
 
@@ -229,7 +234,7 @@ function test()
    print('==> testing on test set:')
    for t = 1,testData:size() do
       -- disp progress
-      --xlua.progress(t, testData:size())
+      xlua.progress(t, testData:size())
 
       -- get new sample
       local input = testData.Songs[t]
