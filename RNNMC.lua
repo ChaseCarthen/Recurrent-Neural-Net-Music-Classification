@@ -1,6 +1,3 @@
-
-
-
 local torch = require 'torch'
 local nn = require "nn"
 local midi = require 'MIDI'
@@ -13,91 +10,30 @@ require 'lfs'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-
-trainData, testData, classes = GetTrainAndTestData("./music", .6)
-print("AFTER")
---print (table.getn(obj.Songs))
---print(classes)
---print(trainData)
-
-
-
-
---print (trainData.Songs[1]:size())
-
+trainData, testData, classes = GetTrainAndTestData("./miniMusic", .5)
 
 
 --Step 2: Create the model
-inp=128;  -- dimensionality of one sequence element 
-outp=128; -- number of derived features for one sequence element
-kw=128;   -- kernel only operates on one sequence element at once
-dw=128;   -- we step once and go on to the next sequence element
---spl =150 -- split constant
+inp = 128;  -- dimensionality of one sequence element 
+outp = 32; -- number of derived features for one sequence element
+kw = 128;   -- kernel only operates on one sequence element at once
+dw = 128;   -- we step once and go on to the next sequence element
+spl = 128 -- split constant
 --print(nn)
 mlp=nn.Sequential()
-mlp:add(nn.TemporalConvolution(inp,outp,kw,dw))
-mlp:add(nn.Reshape(outp))
-mlp:add(nn.Tanh())
-mlp:add(nn.Linear(outp,32))
-mlp:add(nn.PReLU())
-mlp:add(nn.Linear(32,4))
+mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
+mlp:add(nn.Reshape(inp))
+mlp:add(nn.HardTanh())
+mlp:add(nn.Linear(128,128))
+mlp:add(nn.HardTanh())
+mlp:add(nn.Linear(128,#classes))
 mlp:add(nn.LogSoftMax())
+--mlp:add(nn.Square())
 mlp:add(nn.Sum(1))
---mlp:add(nn.parallel)
---mlp:add(nn.Sum(1))
---mlp:add(nn.Mean(2))
---mlp2 = nn.TemporalMaxPooling(3) --nn.TemporalSubSampling(128,3)
-x=torch.rand(256,inp) -- a sequence of 7 elements
---x=nil
---y=torch.rand(8,1)
---print(y)
---print(x)
---print(mlp2:forward(x))
-
-print(mlp:forward(x))
 model = mlp
---print(x)
---print (trainData)
-
-
-
-
-
-
-
---mlp = nn.Sequential()
---mlp:add( nn.Linear(10, 25) ) -- 10 input, 25 hidden units
---mlp:add( nn.Tanh() ) -- some hyperbolic tangent transfer function
---mlp:add( nn.Linear(25, 1) ) -- 1 output
-
---print(mlp:forward(torch.randn(10,10)))
---print(model)
-
-
---[[
-
-
-
-ninputs = 128
-noutputs = 1
-nhidden = 300
---MLP
-model = nn.Sequential()
-model:add(nn.Reshape(ninputs))
-model:add(nn.Linear(ninputs,nhidden))
-
-model:add(nn.ReLU())
-model:add(nn.Linear(nhidden, noutputs))
-model:add(nn.LogSoftMax())
---]]
-
-
-
 
 --Step 3: Defne Our Loss Function
 criterion = nn.ClassNLLCriterion()
-
-
 
 
 -- classes
@@ -122,9 +58,9 @@ end
 
 
 optimState = {
-    learningRate = 0.003,
+    learningRate = 0.5,
     weightDecay = 0.01,
-    momentum = 0.01,
+    momentum = 0.9,
     learningRateDecay = 5e-7
 }
 optimMethod = optim.sgd
@@ -147,39 +83,10 @@ function train()
    --print(#trainData)
    -- shuffle at each epoch
    shuffle = torch.randperm(trainData:size())
-   --print(shuffle:size(1) - #trainData)
-   -- do one epoch
-   --print('==> doing epoch on training data:')
-   --print("==> online epoch # " .. epoch .. ' [batchSize = ' .. 64 .. ']')
-   --print(trainData:size())
+
     
    for t = 1, trainData:size() do
-        --break
-      --print ("HERE" .. shuffle[t])
-      -- disp progress
-      --xlua.progress(t, trainData:size())
-      --for ts = 1,trainData[shuffle[t]]:size(2),64 do
-      -- create mini batch
-      
-        
-        
-      --local inputs = {}
-      --local targets = {}
-
-      --for i = t,math.min(t+64-1,trainData:size()) do
-         -- load new sample
-         --local input = trainData.Songs[shuffle[i]]
-         --local target = trainData.Labels[shuffle[i]]
-         --input = input:double()
-         --table.insert(inputs, input)
-         --table.insert(targets, target)
-      --end
-    
-        
-        
-        
-        
-        
+   
        
       local inputs = {}
       inputs[1] = trainData.Songs[shuffle[t]]
@@ -209,23 +116,12 @@ function train()
                        --print("Evaluating mini-batch")
                        -- evaluate function for complete mini batch
                        for i = 1,#inputs do
-                          --print(i)
-                          -- estimate f   
-                          --print("Calculating output via mode:forward(inputs[i])")
-                          --local splitted = inputs[i]:split(spl,1)
-                           --print(splitted[1]:size())
-                          --for j = 1,#splitted do
-                          
-                          --if splitted[j]:size(1) * splitted[j]:size(2) ~= 128*spl then
-                          -- break
-                        --end
+                     
                           spl_counter  = spl_counter+1
                           --print(inputs[i]:size())
                           --print(splitted[j])
                           local output = model:forward(inputs[i])
-                          --output = torch.reshape(output, #classes)
-                          --Maybe have to reshape outpit
-                          
+                      
                           --print("Calculating error")
                           --print(output:size())
                           --print(targets[i])
@@ -286,8 +182,8 @@ function train()
    -- next epoch
    confusion:zero()
    epoch = epoch + 1
-  end
---train()
+end
+train()
 
 
 
@@ -333,7 +229,7 @@ function test()
    print('==> testing on test set:')
    for t = 1,testData:size() do
       -- disp progress
-      xlua.progress(t, testData:size())
+      --xlua.progress(t, testData:size())
 
       -- get new sample
       local input = testData.Songs[t]
@@ -350,10 +246,6 @@ function test()
       local pred = model:forward(input)
       pred = torch.reshape(pred, #classes)
       --preds[j] = pred
-      --print("prediction")
-      --print(pred)
-      --print("target")
-      --print(target)
       --sum = sum + pred
       confusion:add(pred, target)
       --print (confusion)
@@ -386,30 +278,12 @@ function test()
    -- next iteration:
    confusion:zero()
 end
---test()
 
 
 
 
-for i = 1, 40 do
+for i = 1, 100 do
     train()
-    test()    
+    test()
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

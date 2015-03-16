@@ -38,9 +38,9 @@ function GatherMidiData(BaseDir)
             }
 
             --classifier[directoryName] = firstToUpper(directoryName)
-	    --classes[directoryCounter] = firstToUpper(directoryName)
+	    classes[directoryCounter] = firstToUpper(directoryName)
             classifier[directoryName] = directoryCounter
-	    classes[directoryCounter] = directoryCounter
+	    --classes[directoryCounter] = directoryCounter
 
 
 	    --print(directoryName)
