@@ -16,14 +16,16 @@ trainData, testData, classes = GetTrainAndTestData("./music", .8)
 --Step 2: Create the model
 inp = 128;  -- dimensionality of one sequence element 
 outp = 32; -- number of derived features for one sequence element
-kw = 32;   -- kernel only operates on one sequence element at once
-dw = 16;   -- we step once and go on to the next sequence element
+kw = 64;   -- kernel only operates on one sequence element at once
+dw = 32;   -- we step once and go on to the next sequence element
 spl = 128 -- split constant
 --print(nn)
 mlp=nn.Sequential()
 mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
-mlp:add(nn.Reshape(inp))
-mlp:add(nn.Tanh())
+--mlp:add(nn.Reshape(inp))
+mlp:add(nn.Sigmoid())
+mlp:add(nn.TemporalMaxPooling(2))
+
 mlp:add(nn.Linear(128,32))
 mlp:add(nn.ReLU())
 mlp:add(nn.Linear(32,#classes))
@@ -43,6 +45,7 @@ criterion = nn.ClassNLLCriterion()
 -- This matrix records the current confusion across classes
 confusion = optim.ConfusionMatrix(classes)
 print(confusion)
+
 -- Log results to files
 trainLogger = optim.Logger(paths.concat('.', 'train.log'))
 testLogger = optim.Logger(paths.concat('.', 'test.log'))
@@ -58,9 +61,9 @@ end
 
 
 optimState = {
-    learningRate = 0.5,
+    learningRate = 0.003,
     weightDecay = 0.01,
-    momentum = 0.9,
+    momentum = .01,
     learningRateDecay = 5e-7
 }
 optimMethod = optim.sgd
@@ -70,6 +73,7 @@ optimMethod = optim.sgd
 
 
 epoch = 1
+batch_size = 32
 function train()
 
    -- epoch tracker
@@ -85,14 +89,14 @@ function train()
    shuffle = torch.randperm(trainData:size())
 
     
-   for t = 1, trainData:size(),64 do
+   for t = 1, trainData:size(),batch_size do
    
       xlua.progress(t, trainData:size())  
       local inputs = {}
       
       --print(inputs[0]:size(2))
       local targets = {}
-      for s=0,64
+      for s=0,batch_size
       do
       if t+s > trainData:size() then
       break
@@ -148,7 +152,7 @@ function train()
                        -- normalize gradients and f(X)
                        gradParameters:div(spl_counter)
                        f = f/spl_counter
-                       print(spl_counter)
+                       --print(spl_counter)
                        --print("Returning from feval")
                        -- return f and df/dX
                        return f,gradParameters
@@ -175,7 +179,7 @@ function train()
    trainLogger:add{['% mean class accuracy (train set)'] = confusion.totalValid * 100}
    if true then
       trainLogger:style{['% mean class accuracy (train set)'] = '-'}
-      trainLogger:plot()
+      --trainLogger:plot()
    end
 
    -- save/log current net
@@ -271,7 +275,7 @@ function test()
    testLogger:add{['% mean class accuracy (test set)'] = confusion.totalValid * 100}
    if true then
       testLogger:style{['% mean class accuracy (test set)'] = '-'}
-      testLogger:plot()
+      --testLogger:plot()
    end
 
    -- averaged param use?
