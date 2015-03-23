@@ -10,8 +10,10 @@ require 'lfs'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./miniMusic", .5)
-
+trainData, testData, classes = GetTrainAndTestData("./music", .5)
+print(trainData.Labels)
+NumGenres = #classes
+print(NumGenres)
 
 --Step 2: Create the model
 inp = 128;  -- dimensionality of one sequence element 
@@ -22,19 +24,21 @@ spl = 128 -- split constant
 --print(nn)
 mlp=nn.Sequential()
 mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
-mlp:add(nn.Reshape(inp))
-mlp:add(nn.HardTanh())
-mlp:add(nn.Linear(128,128))
-mlp:add(nn.HardTanh())
-mlp:add(nn.Linear(128,#classes))
-mlp:add(nn.LogSoftMax())
---mlp:add(nn.Square())
+--mlp:add(nn.Reshape(inp))
+mlp:add(nn.Sigmoid())
+mlp:add(nn.Linear(128,32))
+mlp:add(nn.Sigmoid())
+mlp:add(nn.Linear(32,#classes))
 mlp:add(nn.Sum(1))
+--mlp:add(nn.Sigmoid())
+--mlp:add(nn.LogSoftMax())
+--mlp:add(nn.Square())
+
 model = mlp
 
 --Step 3: Defne Our Loss Function
-criterion = nn.ClassNLLCriterion()
-
+--criterion = nn.ClassNLLCriterion()
+criterion = nn.MSECriterion()
 
 -- classes
 --classes = {'Classical','Jazz'}
@@ -58,9 +62,9 @@ end
 
 
 optimState = {
-    learningRate = 0.5,
+    learningRate = 0.00001,
     weightDecay = 0.01,
-    momentum = 0.9,
+    momentum = 0.0,
     learningRateDecay = 5e-7
 }
 optimMethod = optim.sgd
@@ -89,11 +93,12 @@ function train()
    
        
       local inputs = {}
-      inputs[1] = trainData.Songs[shuffle[t]]
+      --inputs[1] = trainData.Songs[shuffle[t]]
       --print(inputs[0]:size(2))
       local targets = {}
-      targets[1] = trainData.Labels[shuffle[t]]
-        
+      --targets[1] = trainData.Labels[shuffle[t]]
+       table.insert(inputs, trainData.Songs[shuffle[t]])
+       table.insert(targets, trainData.Labels[shuffle[t]])        
         
         
         
@@ -118,25 +123,18 @@ function train()
                        for i = 1,#inputs do
                      
                           spl_counter  = spl_counter+1
-                          --print(inputs[i]:size())
-                          --print(splitted[j])
-                          local output = model:forward(inputs[i])
-                      
-                          --print("Calculating error")
-                          --print(output:size())
-                          --print(targets[i])
-                          local err = criterion:forward(output, targets[i])
-                          f = f + err
 
+                          local output = model:forward(inputs[i])
                           
-                          -- estimate df/dW
+	                  local err = criterion:forward(output, targets[i])
+                          f = f + err                     
+
+
                           local df_do = criterion:backward(output, targets[i])
                           model:backward(inputs[i], df_do)
-
-                          -- update confusion
-                        --if (j % 3) then
                           confusion:add(output, targets[i])
-                        --end
+
+
                        --end
                        end
 
@@ -149,10 +147,9 @@ function train()
                        return f,gradParameters
                     end
 
-                   config = {learningRate = 0.003, weightDecay = 0.01, 
-      momentum = 0.01, learningRateDecay = 5e-7}
+                   
         --print("Before optim.sgd")
-        optim.sgd(feval, parameters, config)
+        optim.sgd(feval, parameters, optimState)
         --print("After optim.sgd")
    end
 

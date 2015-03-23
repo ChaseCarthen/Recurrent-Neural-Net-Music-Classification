@@ -14,7 +14,7 @@ end
 classifier = {}
 classes = {}
 
-
+NumberGenres = 0
 
 
 --Gather the midi files from the music directory. The SongGroupContainer is neccessary since we want to split
@@ -22,6 +22,7 @@ classes = {}
 --few of training midis compared to testing or vica-versa
 
 function GatherMidiData(BaseDir) 
+    print("Gathering Midi Data") 
     local SongGroupContainer = {}
     directoryCounter = 0;
     for directoryName in lfs.dir(BaseDir) 
@@ -56,16 +57,14 @@ function GatherMidiData(BaseDir)
                     if data ~= nil then
                         fileCounter = fileCounter + 1 
                         obj.Songs[fileCounter] = data
-                       --print("DATA: ")
-                        --print(data)
-                        --print(data:size())
                     end
                 end
             end
             SongGroupContainer[directoryName] = obj
-            --SerializeData(directoryPath..outputFileName, obj)
+	    NumberGenres = NumberGenres + 1
         end
     end
+    print("Finished gathering Midi Data") 
     return SongGroupContainer
 end
 
@@ -73,10 +72,13 @@ end
 
 
 function SplitMidiData(data, ratio)
+    print("Splitting Midi Data") 
     local trainData = {Labels={}, Songs={}}
     local testData = {Labels={}, Songs={}}
     trainData.size = function() return #trainData.Songs end
     testData.size = function() return #testData.Songs end    
+
+
 
 
     TrainingCounter = 0
@@ -85,22 +87,28 @@ function SplitMidiData(data, ratio)
         local shuffle = torch.randperm(#data[genreKey].Songs)
         local numTrain = math.floor(shuffle:size(1) * ratio)
         local numTest = shuffle:size(1) - numTrain
-            
+
+
+	
         for i=1,numTrain do
           TrainingCounter = TrainingCounter + 1
-          --print(#data[genreKey].Songs)
-          --print(i)
-          --print(genreKey)
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
-          trainData.Labels[TrainingCounter] = classifier[genreKey]
+
+
+	  trainData.Labels[TrainingCounter] = torch.Tensor(NumberGenres):zero()
+
+          trainData.Labels[TrainingCounter][classifier[genreKey]] = 1
+	  --print(trainData.Labels[TrainingCounter])
         end
         
         for i=numTrain+1,numTrain+numTest do
             TestingCounter = TestingCounter + 1
             testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
-            testData.Labels[TestingCounter] = classifier[genreKey]
-
+            --testData.Labels[TestingCounter] = classifier[genreKey]
+	    testData.Labels[TestingCounter] = torch.Tensor(NumberGenres):zero()
+            testData.Labels[TestingCounter][classifier[genreKey]] = 1
         end
+
     end    
     
 
@@ -123,15 +131,16 @@ function SplitMidiData(data, ratio)
     for i=1, TestingCounter do
 	shuffledTestData.Songs[i] = testData.Songs[shuffle[i]]
 	shuffledTestData.Labels[i] = testData.Labels[shuffle[i]]
+	--print(shuffledTestData.Labels[i])
     end
-
+    print("Finished Splitting Midi Data") 
     return shuffledTrainData, shuffledTestData, classes
 end
 
 
 
 
-function GetTrainAndTestData(BaseDir, Ratio)    
+function GetTrainAndTestData(BaseDir, Ratio)   
     Data = GatherMidiData(BaseDir)
     return SplitMidiData(Data, Ratio)
 end
