@@ -124,12 +124,14 @@ function SplitMidiData(data, ratio)
     
     for i=1, TrainingCounter do
 	shuffledTrainData.Songs[i] = trainData.Songs[shuffle[i]]
+    --shuffledTrainData.Songs[i] = (shuffledTrainData.Songs[i] - shuffledTrainData.Songs[i]:mean())/shuffledTrainData.Songs[i]:std()
 	shuffledTrainData.Labels[i] = trainData.Labels[shuffle[i]]
     end
 
     local shuffle = torch.randperm(TestingCounter)
     for i=1, TestingCounter do
 	shuffledTestData.Songs[i] = testData.Songs[shuffle[i]]
+    --shuffledTestData.Songs[i] = (shuffledTestData.Songs[i]-shuffledTestData.Songs[i]:mean())/shuffledTestData.Songs[i]:std()
 	shuffledTestData.Labels[i] = testData.Labels[shuffle[i]]
 	--print(shuffledTestData.Labels[i])
     end

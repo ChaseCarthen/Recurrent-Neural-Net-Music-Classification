@@ -11,9 +11,9 @@ require 'lfs'
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 trainData, testData, classes = GetTrainAndTestData("./music", .5)
-print(trainData.Labels)
+--print(trainData.Labels)
 NumGenres = #classes
-print(NumGenres)
+--print(NumGenres)
 
 --Step 2: Create the model
 inp = 128;  -- dimensionality of one sequence element 
@@ -30,6 +30,7 @@ mlp:add(nn.Linear(128,32))
 mlp:add(nn.Sigmoid())
 mlp:add(nn.Linear(32,#classes))
 mlp:add(nn.Sum(1))
+
 --mlp:add(nn.Sigmoid())
 --mlp:add(nn.LogSoftMax())
 --mlp:add(nn.Square())
@@ -126,6 +127,12 @@ function train()
 
                           local output = model:forward(inputs[i])
                           
+                          output = output/output:norm(1)
+
+                          --Normalize Output
+
+
+
 	                  local err = criterion:forward(output, targets[i])
                           f = f + err                     
 
@@ -241,7 +248,9 @@ function test()
            --                break
              --           end
       local pred = model:forward(input)
-      pred = torch.reshape(pred, #classes)
+      pred = pred/pred:norm(1)
+
+      --pred = torch.reshape(pred, #classes)
       --preds[j] = pred
       --sum = sum + pred
       confusion:add(pred, target)
@@ -279,7 +288,7 @@ end
 
 
 
-for i = 1, 100 do
+for i = 1, 300 do
     train()
     test()
 end
