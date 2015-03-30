@@ -61,7 +61,7 @@ function GatherMidiData(BaseDir)
                 end
             end
             SongGroupContainer[directoryName] = obj
-	    NumberGenres = NumberGenres + 1
+
         end
     end
     print("Finished gathering Midi Data") 
@@ -95,7 +95,7 @@ function SplitMidiData(data, ratio)
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
 
 
-	  trainData.Labels[TrainingCounter] = torch.Tensor(NumberGenres):zero()
+	  trainData.Labels[TrainingCounter] = torch.Tensor(#classes):zero()
 
           trainData.Labels[TrainingCounter][classifier[genreKey]] = 1
 	  --print(trainData.Labels[TrainingCounter])
@@ -105,7 +105,7 @@ function SplitMidiData(data, ratio)
             TestingCounter = TestingCounter + 1
             testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
             --testData.Labels[TestingCounter] = classifier[genreKey]
-	    testData.Labels[TestingCounter] = torch.Tensor(NumberGenres):zero()
+	    testData.Labels[TestingCounter] = torch.Tensor(#classes):zero()
             testData.Labels[TestingCounter][classifier[genreKey]] = 1
         end
 

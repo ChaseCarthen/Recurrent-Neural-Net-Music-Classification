@@ -125,7 +125,9 @@ function train()
                           spl_counter  = spl_counter+1
 
                           local output = model:forward(inputs[i])
-                          
+			  output = output / output:norm()                          
+
+   
 	                  local err = criterion:forward(output, targets[i])
                           f = f + err                     
 
@@ -241,7 +243,8 @@ function test()
            --                break
              --           end
       local pred = model:forward(input)
-      pred = torch.reshape(pred, #classes)
+	pred = pred/pred:norm()
+--      pred = torch.reshape(pred, #classes)
       --preds[j] = pred
       --sum = sum + pred
       confusion:add(pred, target)
