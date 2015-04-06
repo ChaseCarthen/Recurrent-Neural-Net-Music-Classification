@@ -16,22 +16,32 @@ trainData, testData, classes = GetTrainAndTestData("./music", .8)
 --Step 2: Create the model
 inp = 128;  -- dimensionality of one sequence element 
 outp = 32; -- number of derived features for one sequence element
-kw = 64;   -- kernel only operates on one sequence element at once
-dw = 32;   -- we step once and go on to the next sequence element
-spl = 128 -- split constant
+kw = 4;   -- kernel only operates on one sequence element at once
+dw = 4;   -- we step once and go on to the next sequence element
+spl = 64 -- split constant
 --print(nn)
 mlp=nn.Sequential()
 mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
 --mlp:add(nn.Reshape(inp))
-mlp:add(nn.Sigmoid())
+mlp:add(nn.Tanh())
+mlp:add(nn.TemporalMaxPooling(4))
+
+mlp:add(nn.TemporalConvolution(inp,128,4,4))
+--mlp:add(nn.Reshape(inp))
+mlp:add(nn.Tanh())
 mlp:add(nn.TemporalMaxPooling(2))
 
 mlp:add(nn.Linear(128,32))
-mlp:add(nn.ReLU())
-mlp:add(nn.Linear(32,#classes))
-mlp:add(nn.LogSoftMax())
+--mlp:add(nn.Dropout(.2))
+mlp:add(nn.Tanh())
+mlp:add(nn.Linear(32,16))
+
 --mlp:add(nn.Square())
-mlp:add(nn.Sum(1))
+mlp:add(nn.Sum())
+mlp:add(nn.ReLU())
+mlp:add(nn.Linear(16,#classes))
+mlp:add(nn.LogSoftMax())
+
 model = mlp
 
 --Step 3: Defne Our Loss Function
@@ -64,7 +74,7 @@ optimState = {
     learningRate = 0.003,
     weightDecay = 0.01,
     momentum = .01,
-    learningRateDecay = 5e-7
+    learningRateDecay = 1e-7
 }
 optimMethod = optim.sgd
 --print(torch.randperm(11))
@@ -291,7 +301,7 @@ end
 
 
 
-for i = 1, 100 do
+for i = 1, 400 do
     train()
     test()
 end

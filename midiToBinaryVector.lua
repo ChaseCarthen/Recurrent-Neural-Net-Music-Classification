@@ -26,7 +26,7 @@ output: spits out a torch float tensor.
 --]]
 
     setIntensity = function(binVector,note,i,intensity)
-  binVector[note][i] = (intensity )--/ 128)
+  binVector[note][i] = (binVector[note][i] + intensity )--/ 128)
   --if(binVector[note])
   --print(binVector[note][i])
 end
