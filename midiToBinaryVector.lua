@@ -1,7 +1,7 @@
 -- Importing need libraries 
 midi = require "MIDI" -- http://www.pjb.com.au/comp/lua/MIDI.html
 require "torch" -- http://torch.ch/
-
+require "image"
 -- Set the default tensor type to floats
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -26,7 +26,8 @@ output: spits out a torch float tensor.
 --]]
 
     setIntensity = function(binVector,note,i,intensity)
-  binVector[note][i] = (binVector[note][i] + intensity )--/ 128)
+  binVector[1][note][i] = (binVector[1][note][i] + intensity )--/ 128)
+  binVector[2][note][i] = (binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])
 end
@@ -78,7 +79,10 @@ midiToBinaryVec = function(filename)
     f:close()
     -- need to allocate array to feeat everything into
     --local binVector = allocate_array(array_row,array_col)
-    local binVector = torch.Tensor(array_row,array_col):zero()
+    local binVector = torch.Tensor(2,array_row,array_col):zero()
+    --print(binVector)
+    --print(image.scale(binVector,128,512))
+    --local binVector2 = torch.Tensor(1,array_row,array_col):zero()
     --print("NOTES: " .. #notes)
     --print(notes)
     ma = require "math"
@@ -111,7 +115,7 @@ midiToBinaryVec = function(filename)
     end 
     --binVector2 = torch.Tensor(binVector)
     
-    return binVector
+    return image.scale(binVector,128,512)
 end
 
 

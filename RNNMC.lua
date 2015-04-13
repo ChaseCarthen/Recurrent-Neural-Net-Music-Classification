@@ -31,22 +31,38 @@ mlp:add(nn.TemporalConvolution(inp,128,4,4))
 mlp:add(nn.Tanh())
 mlp:add(nn.TemporalMaxPooling(2))
 
-mlp:add(nn.Linear(128,32))
+mlp:add(nn.Linear(128,64))
 --mlp:add(nn.Dropout(.2))
 mlp:add(nn.Tanh())
-mlp:add(nn.Linear(32,16))
-
+mlp:add(nn.Linear(64,128))
+mlp:add(nn.Dropout())
 --mlp:add(nn.Square())
 mlp:add(nn.Sum())
 mlp:add(nn.ReLU())
-mlp:add(nn.Linear(16,#classes))
-mlp:add(nn.LogSoftMax())
+mlp:add(nn.Linear(128,#classes))
+mlp:add(nn.Tanh())
 
 model = mlp
 
---Step 3: Defne Our Loss Function
-criterion = nn.ClassNLLCriterion()
+--- Richards model
+model = nn.Sequential()
+--model:add(nn.Reshape(1,128,512))
+model:add(nn.SpatialContrastiveNormalization(2,image.gaussian1D(5)))
+model:add(nn.SpatialConvolution(2, 6, 5, 5))
+model:add(nn.SpatialMaxPooling(2,2,2,2))
+model:add(nn.SpatialConvolution(6, 16, 5,5))
+model:add(nn.SpatialMaxPooling(2,2,2,2))
+model:add(nn.View(16 * 125 * 29))
+model:add(nn.Linear(16 * 125 * 29, 256))
+model:add(nn.PReLU())
+model:add(nn.Dropout(0.2))
+model:add(nn.Linear(256, #classes))
+model:add(nn.PReLU())
+model:add(nn.LogSoftMax())
 
+--Step 3: Defne Our Loss Function
+--criterion = nn.MultiMarginCriterion()
+criterion = nn.ClassNLLCriterion()
 
 -- classes
 --classes = {'Classical','Jazz'}

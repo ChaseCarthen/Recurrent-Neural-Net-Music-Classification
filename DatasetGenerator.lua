@@ -91,13 +91,13 @@ function SplitMidiData(data, ratio)
           --print(#data[genreKey].Songs)
           --print(i)
           --print(genreKey)
-          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
+          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
           trainData.Labels[TrainingCounter] = classifier[genreKey]
         end
         
         for i=numTrain+1,numTrain+numTest do
             TestingCounter = TestingCounter + 1
-            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
+            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
             testData.Labels[TestingCounter] = classifier[genreKey]
 
         end
@@ -116,14 +116,15 @@ function SplitMidiData(data, ratio)
     
     for i=1, TrainingCounter do
 	shuffledTrainData.Songs[i] = trainData.Songs[shuffle[i]]
-    shuffledTrainData.Songs[i] = (trainData.Songs[shuffle[i]] - trainData.Songs[shuffle[i]]:mean())/(trainData.Songs[shuffle[i]]:std())
+    --print(shuffledTrainData.Songs[i])
+    --shuffledTrainData.Songs[i] = (trainData.Songs[shuffle[i]] - trainData.Songs[shuffle[i]]:mean())/(trainData.Songs[shuffle[i]]:std())
 	shuffledTrainData.Labels[i] = trainData.Labels[shuffle[i]]
     end
 
     local shuffle = torch.randperm(TestingCounter)
     for i=1, TestingCounter do
 	shuffledTestData.Songs[i] = testData.Songs[shuffle[i]]
-    shuffledTestData.Songs[i] = (testData.Songs[shuffle[i]] - testData.Songs[shuffle[i]]:mean())/(testData.Songs[shuffle[i]]:std())
+    --shuffledTestData.Songs[i] = (testData.Songs[shuffle[i]] - testData.Songs[shuffle[i]]:mean())/(testData.Songs[shuffle[i]]:std())
 	shuffledTestData.Labels[i] = testData.Labels[shuffle[i]]
     end
 
