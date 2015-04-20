@@ -10,7 +10,7 @@ require 'writeMidi'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./smusic", .8)
+trainData, testData, classes = GetTrainAndTestData("./music", .8)
 
 
 --Step 2: Create the model
@@ -193,7 +193,7 @@ function train()
                           songs[j] = reshaper:forward(output)
                           if(j % rho ==0)
                           then
-                          r:forget()
+                          r:updateParameters(optimState.learningRate)
                            end 
                           end
                           local combine = nn.Sequential()
@@ -201,7 +201,7 @@ function train()
 			  combine:add(nn.Sum())
                           --print(songs)
                           combine = combine:forward(songs)
-                          
+                          r:forget()
 --print(combine)
                           --combine = combine:int()
                           --print (combine)
@@ -231,7 +231,7 @@ function train()
    end
 
     --print("Before taking time")
-    print(loss/trainData:size())
+    --print(loss/trainData:size())
    -- time taken
    time = sys.clock() - time
    time = time / #trainData
@@ -260,29 +260,6 @@ end
 --train()
 
 
-
-
-getClass = function(preds,target,confusion)
-local c = {}
-c[1] = 0
-c[2] = 0
-c[3] = 0
-for i = 1,#preds
-    do 
-        local m = preds[i][1]
-        local current = 1
-        for j=2,3
-        do
-            if(preds[i][j] > m)
-            then
-                current = j
-            end
-        end
-        c[current] = c[current] + 1
-    end
---print(c)
---print(target)
-end
 
 
 
