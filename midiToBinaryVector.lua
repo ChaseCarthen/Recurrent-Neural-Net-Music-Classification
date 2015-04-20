@@ -27,7 +27,7 @@ output: spits out a torch float tensor.
 --]]
 
     setIntensity = function(binVector,note,i,intensity)
-  binVector[note][i] = intensity--(binVector[note][i] + intensity )--/ 128)
+  binVector[note][i] = (binVector[note][i] + intensity )--/ 128)
   --binVector[2][note][i] = (binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])
@@ -76,9 +76,9 @@ midiToBinaryVec = function(filename)
     -- determing the overall array length using total ticks / smallest furation
     print(min)
     if(min~= 0) then
-    array_col = total_ticks/20 --25 50
+    array_col = total_ticks/50 --25 50
   else
-    array_col = total_ticks/25
+    array_col = total_ticks/50
   end
 
 
