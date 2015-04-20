@@ -10,7 +10,7 @@ require 'writeMidi'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./music", .8)
+trainData, testData, classes = GetTrainAndTestData("./smusic", .8)
 
 
 --Step 2: Create the model
@@ -45,7 +45,7 @@ mlp:add(nn.ReLU())
 --r = mlp
 
 inpMod = nn.Linear(16,16)
-rho = 10
+rho = 5
 r = nn.Recurrent(
    32, mlp, 
    nn.Linear(32, 32), nn.ReLU(), 
@@ -294,11 +294,27 @@ function test()
          --                 if splitted[j]:size(1) * splitted[j]:size(2) ~= 128*spl then
            --                break
              --           end
-      local pred = model:forward(input)
-      pred = torch.reshape(pred, #classes)
+      local is = input:split(100)
+      --print(is)
+      local outs = {}
+      for j=1,#is
+       do
+      if(is[j]:size(1) < 100)
+      then
+      break
+      end
+
+      local pred = model:forward(is[j])
+      local reshaper = nn.Reshape(1,#classes)
+      pred = reshaper:forward(pred)
+      outs[j] = pred
+      end
+      local join = nn.Sequential()
+      join:add(nn.JoinTable(1))
+      join:add(nn.Sum())
       --preds[j] = pred
       --sum = sum + pred
-      confusion:add(pred, target)
+      confusion:add(join:forward(outs), target)
       --print (confusion)
       end
       --getClass(preds,target,confusion)
@@ -336,6 +352,6 @@ end
 for i = 1, 400 do
     print("Epoch: " .. i)
     train()
-    --test()
+    test()
 end
 
