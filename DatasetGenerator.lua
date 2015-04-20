@@ -91,13 +91,13 @@ function SplitMidiData(data, ratio)
           --print(#data[genreKey].Songs)
           --print(i)
           --print(genreKey)
-          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
+          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
           trainData.Labels[TrainingCounter] = classifier[genreKey]
         end
         
         for i=numTrain+1,numTrain+numTest do
             TestingCounter = TestingCounter + 1
-            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
+            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
             testData.Labels[TestingCounter] = classifier[genreKey]
 
         end

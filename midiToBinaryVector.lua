@@ -2,6 +2,7 @@
 midi = require "MIDI" -- http://www.pjb.com.au/comp/lua/MIDI.html
 require "torch" -- http://torch.ch/
 require "image"
+math = require 'math'
 -- Set the default tensor type to floats
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -26,8 +27,8 @@ output: spits out a torch float tensor.
 --]]
 
     setIntensity = function(binVector,note,i,intensity)
-  binVector[1][note][i] = (binVector[1][note][i] + intensity )--/ 128)
-  binVector[2][note][i] = (binVector[2][note][i] + 1 )
+  binVector[note][i] = intensity--(binVector[note][i] + intensity )--/ 128)
+  --binVector[2][note][i] = (binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])
 end
@@ -42,7 +43,7 @@ midiToBinaryVec = function(filename)
     end
     -- Set some local max and min variabes
     local min = 100000000
-    local max = 0
+    local max = 10
 
     -- This variabe keeps track of the current notes
     local notes = {}
@@ -66,20 +67,26 @@ midiToBinaryVec = function(filename)
     then
     -- Finding the minimum and maximum amount of duration
     if max < v2[3] then max = v2[3] end
-    if min > v2[3] then min = v2[3] end
+    if min > v2[3] and min ~= 0 then min = v2[3] end
     notes[#notes+1] = v2
     end
     end
     end
     end
     -- determing the overall array length using total ticks / smallest furation
-    array_col = total_ticks/50
+    print(min)
+    if(min~= 0) then
+    array_col = total_ticks/20 --25 50
+  else
+    array_col = total_ticks/25
+  end
+
 
     array_row = 128 -- The number of midis notes, this can be made better.
     f:close()
     -- need to allocate array to feeat everything into
     --local binVector = allocate_array(array_row,array_col)
-    local binVector = torch.Tensor(2,array_row,array_col):zero()
+    local binVector = torch.Tensor(array_row,array_col):zero()
     --print(binVector)
     --print(image.scale(binVector,128,512))
     --local binVector2 = torch.Tensor(1,array_row,array_col):zero()
@@ -115,7 +122,7 @@ midiToBinaryVec = function(filename)
     end 
     --binVector2 = torch.Tensor(binVector)
     
-    return image.scale(binVector,128,512)
+    return binVector
 end
 
 

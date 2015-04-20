@@ -60,6 +60,25 @@ model:add(nn.Linear(256, #classes))
 model:add(nn.PReLU())
 model:add(nn.LogSoftMax())
 
+-- Richards Model 2
+model = nn.Sequential()
+model:add(nn.SpatialContrastiveNormalization(2,image.gaussian1D(5)))
+model:add(nn.SpatialConvolution(2,16,5,5))
+model:add(nn.PReLU())
+model:add(nn.SpatialMaxPooling(2,2,2,2))
+
+model:add(nn.SpatialConvolution(16,32,5,5))
+model:add(nn.PReLU())
+model:add(nn.SpatialMaxPooling(2,2,2,2))
+
+model:add(nn.View(32*125*29))
+model:add(nn.Linear(32*125*29,256))
+model:add(nn.Dropout(.5))
+model:add(nn.PReLU())
+model:add(nn.Linear(256,#classes))
+model:add(nn.Dropout(0.5))
+model:add(nn.LogSoftMax())
+
 --Step 3: Defne Our Loss Function
 --criterion = nn.MultiMarginCriterion()
 criterion = nn.ClassNLLCriterion()
