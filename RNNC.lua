@@ -10,7 +10,7 @@ require 'writeMidi'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./smusic", .8)
+trainData, testData, classes = GetTrainAndTestData("./music", .8)
 
 
 --Step 2: Create the model
@@ -31,20 +31,17 @@ mlp=nn.Sequential()
 --mlp:add(nn.Tanh())
 --mlp:add(nn.TemporalMaxPooling(2))
 
-mlp:add(nn.Linear(128,64))
+mlp:add(nn.Linear(128,32))
 --mlp:add(nn.Dropout(.2))
 mlp:add(nn.Tanh())
-mlp:add(nn.Linear(64,32))
 
---mlp:add(nn.Square())
---mlp:add(nn.Sum())
-mlp:add(nn.ReLU())
 --mlp:add(nn.Linear(16,#classes))
 --mlp:add(nn.LogSoftMax())
 
 --r = mlp
 
 inpMod = nn.Linear(16,16)
+rhobatch = 100
 rho = 5
 r = nn.Recurrent(
    32, mlp, 
@@ -57,6 +54,7 @@ model = nn.Sequential()
 model:add(r)
 --model:add(nn.Reshape(1,40))
 model:add(nn.Linear(32,#classes))
+nn.ReLU()
 model:add(nn.Sum())
 model:add(nn.LogSoftMax())
 --model:add(nn.MulConstant(127))
@@ -115,7 +113,7 @@ function train()
 
    -- local vars
    local time = sys.clock()
-
+   local counter = 1
    -- set model to training mode (for modules that differ in training and testing, like Dropout)
    model:training()
    --print(#trainData)
@@ -156,18 +154,20 @@ function train()
                        -- f is the average of all criterions
                        local f = 0
                        local spl_counter = 0
+
                        local songs = {}
                        --print("Evaluating mini-batch")
                        -- evaluate function for complete mini batch
                        for i = 1,#inputs do
-                          local is = inputs[i]:split(100)
+                          local is = inputs[i]:split(rhobatch)
                           for j=1,#is
                           do
-                          if(is[j]:size(1) ~= 100)
+                          if(is[j]:size(1) ~= rhobatch)
                           then
                           break
                           end
                           spl_counter  = spl_counter+1
+                          counter  = counter+1
                           --print(is[j])
                           --print(inputs[i]:size())l
                           --print(splitted[j])
@@ -191,7 +191,7 @@ function train()
 			  local reshaper = nn.Reshape(1,#classes)
                     
                           songs[j] = reshaper:forward(output)
-                          if(j % rho ==0)
+                          if(counter % rho-1 ==0)
                           then
                           r:updateParameters(optimState.learningRate)
                            end 
@@ -225,7 +225,7 @@ function train()
                    --config = {learningRate = 0.003, weightDecay = 0.01, 
       ---momentum = 0.01, learningRateDecay = 5e-7}
         --print("Before optim.sgd")
-        _,fs2 = optim.sgd(feval, parameters, optimState)
+        _,fs2 = optim.rprop(feval, parameters, optimState)
         loss = loss + fs2[1]
         --print("After optim.sgd")
    end
@@ -294,12 +294,12 @@ function test()
          --                 if splitted[j]:size(1) * splitted[j]:size(2) ~= 128*spl then
            --                break
              --           end
-      local is = input:split(100)
+      local is = input:split(rhobatch)
       --print(is)
       local outs = {}
       for j=1,#is
        do
-      if(is[j]:size(1) < 100)
+      if(is[j]:size(1) < rhobatch)
       then
       break
       end
@@ -315,6 +315,7 @@ function test()
       --preds[j] = pred
       --sum = sum + pred
       confusion:add(join:forward(outs), target)
+      r:forget()
       --print (confusion)
       end
       --getClass(preds,target,confusion)

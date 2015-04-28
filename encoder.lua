@@ -31,37 +31,43 @@ mlp=nn.Sequential()
 --mlp:add(nn.Tanh())
 --mlp:add(nn.TemporalMaxPooling(2))
 
-mlp:add(nn.Linear(128,64))
+mlp:add(nn.Linear(128,32))
 --mlp:add(nn.Dropout(.2))
-mlp:add(nn.Tanh())
-mlp:add(nn.Linear(64,32))
+--mlp:add(nn.Tanh())
+--mlp:add(nn.Linear(64,32))
 
 --mlp:add(nn.Square())
 --mlp:add(nn.Sum())
-mlp:add(nn.ReLU())
+mlp:add(nn.Tanh())
 --mlp:add(nn.Linear(16,#classes))
 --mlp:add(nn.LogSoftMax())
 
 --r = mlp
 
 inpMod = nn.Linear(16,16)
-rho = 5
-r = nn.Recurrent(
+rhobatch = 50
+rho = 500
+r2 = nn.Recurrent(
    32, mlp, 
    nn.Linear(32, 32), nn.ReLU(), 
    rho
 )
-
+r = nn.LSTM(128,2,rho)
+r2 = nn.LSTM(128,64,rho)
 model = nn.Sequential()
 --model:add(mlp)
 model:add(r)
---model:add(nn.Reshape(1,40))
-model:add(nn.Linear(32,128))
---model:add(nn.Sum())
+--model:add(nn.Tanh())
+--model:add(r2)
 model:add(nn.ReLU())
+
+--model:add(nn.Reshape(1,40))
+model:add(nn.Linear(2 ,128))
+--model:add(nn.Sum())
+model:add(nn.Tanh())
+--model:add(nn.LogSoftMax())
 model:add(nn.MulConstant(127))
 --smodel:add(nn.Abs())
-
 --ab = torch.randn(100,128)
 
 --print(model:forward(ab))
@@ -107,12 +113,13 @@ optimMethod = optim.sgd
 
 
 epoch = 1
-batch_size = 32
+batch_size = 10
 function train()
 
    -- epoch tracker
    epoch = epoch or 1
 
+   local counter = 1
    -- local vars
    local time = sys.clock()
 
@@ -160,14 +167,15 @@ function train()
                        --print("Evaluating mini-batch")
                        -- evaluate function for complete mini batch
                        for i = 1,#inputs do
-                          local is = inputs[i]:split(100)
+                          local is = inputs[i]:split(rhobatch)
                           for j=1,#is
                           do
-                          if(is[j]:size(1) ~= 100)
+                          if(is[j]:size(1) ~= rhobatch)
                           then
                           break
                           end
                           spl_counter  = spl_counter+1
+                          counter = counter+1
                           --print(is[j])
                           --print(inputs[i]:size())
                           --print(splitted[j])
@@ -187,18 +195,22 @@ function train()
                           --model:backward(inputs[i], df_do)
                           local df_do = criterion:backward(output, is[j])
                           model:backward(is[j], df_do)
-                          songs[j] = output
-                          if(j % 5 ==0)
+                          songs[j] = (output)
+                          if( (counter % rho-1) ==0)
                           then
-                          r:forget()
+                          r:updateParameters(optimState.learningRate)
+                          --r2:updateParameters(optimState.learningRate)
                            end 
                           end
+                          --r:updateParameters(optimState.learningRate)
+                          r:forget()
+                          --r2:forget()
                           local combine = nn.JoinTable(1)
                           combine = combine:forward(songs)
                           
                           combine = combine:int()
                           --print (combine)
-                          if epoch % 40 == 0 and i % 10 == 0
+                          if epoch % 100 == 0 and i % 10 == 0
                           then
                           writeMidi(epoch .. "song" .. i .. ".mid",combine, 10,10)
                           writeMidi(epoch .. "song" .. i .. "orig.mid",inputs[i],10,10)
@@ -223,12 +235,14 @@ function train()
       ---momentum = 0.01, learningRateDecay = 5e-7}
         --print("Before optim.sgd")
         _,fs2 = optim.sgd(feval, parameters, optimState)
+        --print(fs2)
         loss = loss + fs2[1]
         --print("After optim.sgd")
    end
 
     --print("Before taking time")
     print(loss/trainData:size())
+    --print(trainData:size())
    -- time taken
    time = sys.clock() - time
    time = time / #trainData
@@ -294,7 +308,7 @@ function test()
    end
 
    -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
-   model:evaluate()
+   --model:evaluate()
   print(testData:size())
    -- test over test data
    print('==> testing on test set:')
