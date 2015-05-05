@@ -1,51 +1,51 @@
 local torch = require 'torch'
-local nn = require "nn"
+require "nn"
 local midi = require 'MIDI'
 require "optim"
 require "midiToBinaryVector"
 require 'DatasetGenerator'
 require 'lfs'
+require 'nnx'
+local file = require 'file'
+
+
+-- imagine we have one network we are interested in, it is called "p1_mlp"
+p1_mlp= nn.Sequential(); 
+p1_mlp:add(nn.Linear(128,2))
+p1_mlp:add(nn.Sum())
+
+-- But we want to push examples towards or away from each other
+-- so we make another copy of it called p2_mlp
+-- this *shares* the same weights via the set command, but has its own set of temporary gradient storage
+-- that's why we create it again (so that the gradients of the pair don't wipe each other)
+p2_mlp= nn.Sequential(); 
+p2_mlp:add(nn.Linear(128,2))
+p2_mlp:add(nn.Sum())
+p2_mlp:get(1).weight:set(p1_mlp:get(1).weight)
+p2_mlp:get(1).bias:set(p1_mlp:get(1).bias)
+
+-- we make a parallel table that takes a pair of examples as input. they both go through the same (cloned) mlp
+prl = nn.ParallelTable()
+prl:add(p1_mlp)
+prl:add(p2_mlp)
 
 
 
+-- now we define our top level network that takes this parallel table and computes the pairwise distance betweem
+-- the pair of outputs
+mlp2= nn.Sequential()
+mlp2:add(prl)
+mlp2:add(nn.PairwiseDistance(3))
 
---Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./miniMusic", .8)
+-- and a criterion for pushing together or pulling apart pairs
+crit=nn.HingeEmbeddingCriterion(1)
 
 
---Step 2: Create the model
-inp = 128;  -- dimensionality of one sequence element 
-outp = 32; -- number of derived features for one sequence element
-kw = 4;   -- kernel only operates on one sequence element at once
-dw = 4;   -- we step once and go on to the next sequence element
-spl = 64 -- split constant
---print(nn)
-mlp=nn.Sequential()
-mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
---mlp:add(nn.Reshape(inp))
-mlp:add(nn.Tanh())
-mlp:add(nn.TemporalMaxPooling(4))
-
-mlp:add(nn.TemporalConvolution(inp,128,4,4))
---mlp:add(nn.Reshape(inp))
-mlp:add(nn.Tanh())
-mlp:add(nn.TemporalMaxPooling(2))
-
-mlp:add(nn.Linear(128,64))
---mlp:add(nn.Dropout(.2))
-mlp:add(nn.Tanh())
-mlp:add(nn.Linear(64,128))
-mlp:add(nn.Dropout())
---mlp:add(nn.Square())
-mlp:add(nn.Sum())
-mlp:add(nn.ReLU())
-mlp:add(nn.Linear(128,#classes))
-mlp:add(nn.Tanh())
-
-model = mlp
+criterion = nn.ClassNLLCriterion()
 
 --- Richards model
 model = nn.Sequential()
+
 --model:add(nn.Reshape(1,128,512))
 model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
 model:add(nn.SpatialConvolution(1, 6, 5, 5))
@@ -56,20 +56,94 @@ model:add(nn.View(16 * 125 * 29))
 model:add(nn.Linear(16 * 125 * 29, 256))
 model:add(nn.PReLU())
 model:add(nn.Dropout(0.2))
-model:add(nn.Linear(256, #classes))
+--model:add(nn.Linear(256, #classes))
+model:add(nn.Linear(256,128*512))
+model:add(nn.PReLU())
+model:add(nn.Linear(128*512,6))
 model:add(nn.PReLU())
 model:add(nn.LogSoftMax())
+local numofw = 12
+--distance2 = nn.Euclidean(128*512,128*512)
 
+
+-- GetClass
+function getClass(input,weights,numberOfClasses,inputWidth)
+  --print("GETCLASS")
+  
+  local max = 0
+  local class = 1 
+  --print("GetClass")
+  --print(numberOfClasses)
+  --print(weights[1]:size())
+  --print(input:size())
+  a = nn.View(512*128)
+  local inp = a:forward(input)
+  --print(inp[1]:size())
+  for i=1,numberOfClasses do
+    if torch.dist(inp[1],weights[i]) > max then
+      class = i
+      max = torch.dist(inp[1],weights[i])
+    end
+
+
+  end
+  --print(class)
+  return class
+end
+
+
+
+-- Use a typical generic gradient update function
+function gradUpdate(x, y, criterion, learningRate)
+--  print(#x)
+--print(x[1])
+local pred = mlp2:forward(x)
+print(pred)
+--print("pred")
+--print(pred)
+if pred[1] > 5000
+then
+y = 1
+else
+y = -1
+end 
+--print (y)
+local err = criterion:forward(pred, y)
+local gradCriterion = criterion:backward(pred, y)
+
+--mlp2:zeroGradParameters()
+mlp2:backward(x, gradCriterion)
+--mlp2:updateParameters(learningRate)
+return err
+end
+
+
+
+
+
+--Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
+trainData, testData, classes = GetTrainAndTestData("./music", .8)
+print(classes)
+classes = 6
+
+--print(model:forward(ab))
+--print(model:forward(a))
 --Step 3: Defne Our Loss Function
 --criterion = nn.MultiMarginCriterion()
-criterion = nn.ClassNLLCriterion()
-
+--criterion = nn.ClassNLLCriterion()
+--criterion = nn.AbsCriterion()
+--criterion = nn.MSECriterion()
+--criterion = nn.DistKLDivCriterion()
 -- classes
 --classes = {'Classical','Jazz'}
 --Obtained from GetTrainAndTestData
 
 -- This matrix records the current confusion across classes
-confusion = optim.ConfusionMatrix(classes)
+cla = {}
+for i = 1,classes do
+  cla[i] = " i"
+end
+confusion = optim.ConfusionMatrix(cla)
 print(confusion)
 
 -- Log results to files
@@ -99,12 +173,13 @@ optimMethod = optim.sgd
 
 
 epoch = 1
-batch_size = 32
+batch_size = 10
 function train()
 
    -- epoch tracker
    epoch = epoch or 1
 
+   local counter = 1
    -- local vars
    local time = sys.clock()
 
@@ -114,26 +189,15 @@ function train()
    -- shuffle at each epoch
    shuffle = torch.randperm(trainData:size())
 
-    
-   for t = 1, trainData:size(),batch_size do
-   
+   loss = 0
+   for t = 1, trainData:size() do
+      
       xlua.progress(t, trainData:size())  
       local inputs = {}
       
-      --print(inputs[0]:size(2))
-      local targets = {}
-      for s=0,batch_size
-      do
-      if t+s > trainData:size() then
-      break
-      end
-      inputs[s] = trainData.Songs[shuffle[t+s]]
-      targets[s] = trainData.Labels[shuffle[t+s]]
-      end  
-        
-        
-    --print(inputs)
-    -- print(targets)
+      inputs[1] = trainData.Songs[t]
+
+
 
       -- create closure to evaluate f(X) and df/dX
       local feval = function(x)
@@ -148,35 +212,34 @@ function train()
                        -- f is the average of all criterions
                        local f = 0
                        local spl_counter = 0
-                       --print("Evaluating mini-batch")
-                       -- evaluate function for complete mini batch
-                       for i = 1,#inputs do
-                     
+                       local songs = {}
+
+                       --for i = 1,1 do
+                          --print(1)
+                          --print(classes)
                           spl_counter  = spl_counter+1
-                          --print(inputs[i]:size())
-                          --print(splitted[j])
-                          local output = model:forward(inputs[i])
-                      
-                          --print("Calculating error")
-                          --print(output:size())
-                          --print(targets[i])
-                          local err = criterion:forward(output, targets[i])
-                          print(err)
+                          counter = counter+1
+
+                          local output = model:forward(inputs[1])
+                          --local output2 = model:forward(targets[i])
+                          --print("Labels: " .. l[i] .. " " .. trainData.Labels[t])
+                          --print(model:get(12))
+                          local cla = getClass(inputs[1],model:get(numofw).weight,classes,128*512)
+                          local err = criterion:forward(output,cla)--gradUpdate({inputs[1],targets[i]},1,crit,optim.learningRate)--criterion:forward(output, inputs[1])
                           f = f + err
 
                           
                           -- estimate df/dW
-                          local df_do = criterion:backward(output, targets[i])
-                          print(df_do)
-                          print(parameters:size())
-                          model:backward(inputs[i], df_do)
+                          --local df_do = criterion:backward(output, inputs[1])
+                          --model:backward(inputs[i], df_do)
+                          local df_do = criterion:backward(output, cla)
+                          --print(df_do)
+                          model:backward(inputs[1], df_do)
+                          --songs[j] = (output)
+                          confusion:add(output, cla)
+                          
 
-                          -- update confusion
-                        --if (j % 3) then
-                          confusion:add(output, targets[i])
-                        --end
                        --end
-                       end
 
                        -- normalize gradients and f(X)
                        gradParameters:div(spl_counter)
@@ -187,15 +250,15 @@ function train()
                        return f,gradParameters
                     end
 
-                   --config = {learningRate = 0.003, weightDecay = 0.01, 
-      ---momentum = 0.01, learningRateDecay = 5e-7}
-        --print("Before optim.sgd")
-        optim.sgd(feval, parameters, optimState)
+        _,fs2 = optim.sgd(feval, parameters, optimState)
+        --print(fs2)
+        loss = loss + fs2[1]
         --print("After optim.sgd")
    end
 
     --print("Before taking time")
-    
+    print(loss/trainData:size())
+    --print(trainData:size())
    -- time taken
    time = sys.clock() - time
    time = time / #trainData
@@ -221,32 +284,12 @@ function train()
    confusion:zero()
    epoch = epoch + 1
 end
-train()
+--train()
 
 
 
 
-getClass = function(preds,target,confusion)
-local c = {}
-c[1] = 0
-c[2] = 0
-c[3] = 0
-for i = 1,#preds
-    do 
-        local m = preds[i][1]
-        local current = 1
-        for j=2,3
-        do
-            if(preds[i][j] > m)
-            then
-                current = j
-            end
-        end
-        c[current] = c[current] + 1
-    end
---print(c)
---print(target)
-end
+
 
 
 
@@ -261,7 +304,7 @@ function test()
    end
 
    -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
-   model:evaluate()
+   --model:evaluate()
   print(testData:size())
    -- test over test data
    print('==> testing on test set:')
@@ -318,10 +361,27 @@ function test()
 end
 
 
+clusterfile = "cluster"
+
+for i = 1, 40 do
+    print("Epoch: " .. i)
+        if i%5 == 0 then
+      for j = 1,classes do
+        file.write(clusterfile .. j .. ".txt","")
+      end
+      print("Here")
+      --print(trainData)
+      for k =1,trainData:size() do
+        output = model:forward(trainData.Songs[k])
+        local group = getClass(trainData.Songs[k],model:get(numofw).weight,classes,128*512)
+        file.write(clusterfile .. group .. ".txt",trainData.Files[k] .. "\n","a")
+      end
 
 
-for i = 1, 400 do
+    end
     train()
-    test()
+
+
+    --test()
 end
 

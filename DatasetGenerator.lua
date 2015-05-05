@@ -34,7 +34,8 @@ function GatherMidiData(BaseDir)
             local obj = 
             {
                 Genre = directoryName,
-                Songs = {}
+                Songs = {},
+                Files = {}
             }
 
             --classifier[directoryName] = firstToUpper(directoryName)
@@ -56,7 +57,9 @@ function GatherMidiData(BaseDir)
                     if data ~= nil then
                         fileCounter = fileCounter + 1 
                         obj.Songs[fileCounter] = data
-                       --print("DATA: ")
+                        obj.Files[fileCounter] = FullFilePath
+                       print("DATA: ")
+                       print(FullFilePath)
                         --print(data)
                         --print(data:size())
                     end
@@ -73,8 +76,8 @@ end
 
 
 function SplitMidiData(data, ratio)
-    local trainData = {Labels={}, Songs={}}
-    local testData = {Labels={}, Songs={}}
+    local trainData = {Labels={}, Songs={},Files={}}
+    local testData = {Labels={}, Songs={},Files={}}
     trainData.size = function() return #trainData.Songs end
     testData.size = function() return #testData.Songs end    
 
@@ -87,19 +90,22 @@ function SplitMidiData(data, ratio)
         local numTest = shuffle:size(1) - numTrain
             
         for i=1,numTrain do
+          print(TrainingCounter)
           TrainingCounter = TrainingCounter + 1
           --print(#data[genreKey].Songs)
           --print(i)
           --print(genreKey)
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
           trainData.Labels[TrainingCounter] = classifier[genreKey]
+          trainData.Files[TrainingCounter] = data[genreKey].Files[shuffle[i]]
         end
         
         for i=numTrain+1,numTrain+numTest do
             TestingCounter = TestingCounter + 1
             testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
             testData.Labels[TestingCounter] = classifier[genreKey]
-
+            print(data[genreKey].Files[shuffle[i]])
+            testData.Files[TestingCounter] = data[genreKey].Files[shuffle[i]]
         end
     end    
     
@@ -107,11 +113,13 @@ function SplitMidiData(data, ratio)
 
 
 
-    local shuffledTrainData = {Labels={}, Songs={}}
-    local shuffledTestData = {Labels={}, Songs={}}
+    local shuffledTrainData = {Labels={}, Songs={},Files={}}
+    local shuffledTestData = {Labels={}, Songs={},Files={}}
     shuffledTrainData.size = function() return #shuffledTrainData.Songs end
     shuffledTestData.size = function() return #shuffledTestData.Songs end    
     --Shuffle all of the data around
+    print(TrainingCounter)
+    --TrainingCounter = nil
     local shuffle = torch.randperm(TrainingCounter)
     
     for i=1, TrainingCounter do
@@ -119,6 +127,7 @@ function SplitMidiData(data, ratio)
     --print(shuffledTrainData.Songs[i])
     --shuffledTrainData.Songs[i] = (trainData.Songs[shuffle[i]] - trainData.Songs[shuffle[i]]:mean())/(trainData.Songs[shuffle[i]]:std())
 	shuffledTrainData.Labels[i] = trainData.Labels[shuffle[i]]
+    shuffledTrainData.Files[i] = trainData.Files[shuffle[i]]
     end
 
     local shuffle = torch.randperm(TestingCounter)
@@ -126,6 +135,7 @@ function SplitMidiData(data, ratio)
 	shuffledTestData.Songs[i] = testData.Songs[shuffle[i]]
     --shuffledTestData.Songs[i] = (testData.Songs[shuffle[i]] - testData.Songs[shuffle[i]]:mean())/(testData.Songs[shuffle[i]]:std())
 	shuffledTestData.Labels[i] = testData.Labels[shuffle[i]]
+    shuffledTestData.Files[i] = testData.Files[shuffle[i]]
     end
 
     return shuffledTrainData, shuffledTestData, classes
