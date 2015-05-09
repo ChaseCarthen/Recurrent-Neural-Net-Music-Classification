@@ -1,3 +1,4 @@
+print("STARTING")
 local torch = require 'torch'
 require "nn"
 local midi = require 'MIDI'
@@ -6,9 +7,13 @@ require "midiToBinaryVector"
 require 'DatasetGenerator'
 require 'lfs'
 require 'nnx'
+require 'midibinning'
+--require 'cunnx'
+require 'cunn'
 local file = require 'file'
 
-
+local files = getFiles("./midibins",'.dat')
+print(files)
 -- imagine we have one network we are interested in, it is called "p1_mlp"
 p1_mlp= nn.Sequential(); 
 p1_mlp:add(nn.Linear(128,2))
@@ -47,22 +52,33 @@ criterion = nn.ClassNLLCriterion()
 model = nn.Sequential()
 
 --model:add(nn.Reshape(1,128,512))
-model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
+--model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
 model:add(nn.SpatialConvolution(1, 6, 5, 5))
 model:add(nn.SpatialMaxPooling(2,2,2,2))
 model:add(nn.SpatialConvolution(6, 16, 5,5))
 model:add(nn.SpatialMaxPooling(2,2,2,2))
 model:add(nn.View(16 * 125 * 29))
 model:add(nn.Linear(16 * 125 * 29, 256))
-model:add(nn.PReLU())
+model:add(nn.Tanh())
 model:add(nn.Dropout(0.2))
 --model:add(nn.Linear(256, #classes))
 model:add(nn.Linear(256,128*512))
-model:add(nn.PReLU())
-model:add(nn.Linear(128*512,6))
-model:add(nn.PReLU())
+model:add(nn.ReLU())
+model:add(nn.Linear(128*512,10))
+--model:add(nn.Tanh())
 model:add(nn.LogSoftMax())
-local numofw = 12
+model2 = model
+model2:cuda()
+
+print("MODEL LOADED")
+model = nn.Sequential()
+model:add(nn.Reshape(1,128,512))
+model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
+model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
+model:add(model2)
+model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
+
+local numofw = 11
 --distance2 = nn.Euclidean(128*512,128*512)
 
 
@@ -80,9 +96,11 @@ function getClass(input,weights,numberOfClasses,inputWidth)
   local inp = a:forward(input)
   --print(inp[1]:size())
   for i=1,numberOfClasses do
-    if torch.dist(inp[1],weights[i]) > max then
+    --print(inp)
+    --print(weights[i])
+    if torch.dist(inp,weights[i]) > max then
       class = i
-      max = torch.dist(inp[1],weights[i])
+      max = torch.dist(inp,weights[i])
     end
 
 
@@ -122,9 +140,9 @@ end
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./music", .8)
-print(classes)
-classes = 6
+--trainData, testData, classes = GetTrainAndTestData("./music", .8)
+--print(classes)
+classes = 10
 
 --print(model:forward(ab))
 --print(model:forward(a))
@@ -141,7 +159,7 @@ classes = 6
 -- This matrix records the current confusion across classes
 cla = {}
 for i = 1,classes do
-  cla[i] = " i"
+  cla[i] = i
 end
 confusion = optim.ConfusionMatrix(cla)
 print(confusion)
@@ -187,17 +205,21 @@ function train()
    model:training()
    --print(#trainData)
    -- shuffle at each epoch
-   shuffle = torch.randperm(trainData:size())
+   --print(files)
+   shuffle = torch.randperm(#files)
 
    loss = 0
-   for t = 1, trainData:size() do
+   for t = 1, #files do
+      xlua.progress(t, #files ) 
       
-      xlua.progress(t, trainData:size())  
-      local inputs = {}
+      local inputs = torch.load(files[shuffle[t]]).data
+      for l = 1, #inputs do
+      xlua.progress(l, #inputs ) 
+      --trainData.Songs[t]
+      --print(files[t])
+      --print(inputs[1]:size())
+
       
-      inputs[1] = trainData.Songs[t]
-
-
 
       -- create closure to evaluate f(X) and df/dX
       local feval = function(x)
@@ -220,11 +242,12 @@ function train()
                           spl_counter  = spl_counter+1
                           counter = counter+1
 
-                          local output = model:forward(inputs[1])
+                          local output = model:forward(inputs[l])
                           --local output2 = model:forward(targets[i])
                           --print("Labels: " .. l[i] .. " " .. trainData.Labels[t])
                           --print(model:get(12))
-                          local cla = getClass(inputs[1],model:get(numofw).weight,classes,128*512)
+                          local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
+                          local cla = getClass(inputs[l],W,classes,128*512)
                           local err = criterion:forward(output,cla)--gradUpdate({inputs[1],targets[i]},1,crit,optim.learningRate)--criterion:forward(output, inputs[1])
                           f = f + err
 
@@ -236,7 +259,7 @@ function train()
                           --print(df_do)
                           model:backward(inputs[1], df_do)
                           --songs[j] = (output)
-                          confusion:add(output, cla)
+                          --confusion:add(output, cla)
                           
 
                        --end
@@ -253,19 +276,21 @@ function train()
         _,fs2 = optim.sgd(feval, parameters, optimState)
         --print(fs2)
         loss = loss + fs2[1]
+        end
+
         --print("After optim.sgd")
    end
 
     --print("Before taking time")
-    print(loss/trainData:size())
+    print(loss/#files)
     --print(trainData:size())
    -- time taken
    time = sys.clock() - time
-   time = time / #trainData
+   time = time / #files
    --print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
 
    -- print confusion matrix
-   print(confusion)
+   --print(confusion)
 
    -- update logger/plot
    trainLogger:add{['% mean class accuracy (train set)'] = confusion.totalValid * 100}
@@ -275,13 +300,15 @@ function train()
    end
 
    -- save/log current net
+   if epoch % 1 == 0 then
    local filename = paths.concat('.', 'model.net')
    os.execute('mkdir -p ' .. sys.dirname(filename))
    print('==> saving model to '..filename)
    torch.save(filename, model)
+   end
 
    -- next epoch
-   confusion:zero()
+   --confusion:zero()
    epoch = epoch + 1
 end
 --train()
@@ -365,16 +392,25 @@ clusterfile = "cluster"
 
 for i = 1, 40 do
     print("Epoch: " .. i)
-        if i%5 == 0 then
+        if i%1 == 0 then
       for j = 1,classes do
         file.write(clusterfile .. j .. ".txt","")
       end
-      print("Here")
+      print("Writing to Clusters")
+
+      local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
       --print(trainData)
-      for k =1,trainData:size() do
-        output = model:forward(trainData.Songs[k])
-        local group = getClass(trainData.Songs[k],model:get(numofw).weight,classes,128*512)
-        file.write(clusterfile .. group .. ".txt",trainData.Files[k] .. "\n","a")
+      for k =1,#files do
+        local DETA = torch.load(files[k])
+        xlua.progress(k, #files ) 
+        --if DETA ~= nil then
+        for detas = 1,#DETA.files do
+        xlua.progress(detas, #DETA.files ) 
+        output = model:forward(DETA.data[detas])
+        local group = getClass(DETA.data[detas],W,classes,128*512)
+        file.write(clusterfile .. group .. ".txt",DETA.files[detas] .. "\n","a")
+        --end
+        end
       end
 
 

@@ -32,7 +32,7 @@ output: spits out a torch float tensor.
   --print(binVector[note][i])
 end
 midiToBinaryVec = function(filename)
-    print(filename)
+    --print(filename)
     -- read the file
     local f = assert(io.open(filename, "r"))
     local t = f:read("*all")
@@ -102,9 +102,9 @@ midiToBinaryVec = function(filename)
     if( not ok)
 
    then
-      print ("ERROR: ")
-    print(err)
-    print(ok)
+      --print ("ERROR: ")
+    --print(err)
+    --print(ok)
    return nil
   else
    --print ("Okay: ")
@@ -134,12 +134,12 @@ end
 
 
     setIntensity2 = function(binVector,note,i,intensity)
-  if binVector[note][i] > 0
-  then
+  --if binVector[note][i] > 0
+  --then
   binVector[note][i] = 1--(binVector[note][i] + intensity )--/ 128)
-else
-  binVector[note][i] = 0
-  end
+--else
+  --binVector[note][i] = 0
+  --end
   --binVector[2][note][i] = (binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])

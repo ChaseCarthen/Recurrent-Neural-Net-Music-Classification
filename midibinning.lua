@@ -4,7 +4,7 @@ require 'nn'
 file = require 'file'
 
 local midi = require 'MIDI'
-
+mtbv = require "midiToBinaryVector"
 -- step one load model from a file
 
 -- step two test the model to see if it works
@@ -12,7 +12,7 @@ local midi = require 'MIDI'
 -- step three setup classification models
 
 -- store genres destinations here..
-function getFiles(BaseDir)
+function getFiles(BaseDir,format)
 
 destinations = {}
 destinations[1] = "test.txt"
@@ -28,7 +28,7 @@ for directoryName in lfs.dir(BaseDir)
     do 
     print(directoryName)
     combinedName = BaseDir .. "/" .. directoryName
-    print(combinedName)
+    --print(combinedName)
 
     if directoryName ~= ".." and directoryName ~= "." and lfs.attributes(BaseDir.."/"..directoryName,"mode") == "directory"
     then
@@ -38,11 +38,16 @@ for directoryName in lfs.dir(BaseDir)
     -- classify midi datasets with model
     print(mid)
     local genre = 1 
-    if destinations[1] then 
-    local content = combinedName .. "/" .. mid .. "\n"
+    if destinations[1] and string.find(mid, format) then 
+    local content = combinedName .. "/" .. mid
     counter = counter + 1
+    --if counter >  49870   then
+    --print (content .."COUNTERRRRRRRRR!!!    " ..  counter)
+    --local data = midiToBinaryVec(content)
+    --end 
+    --print(data)
     testList[counter] = content
-    print(content)
+    --print(content)
     --file.write(destinations[1],content,"a")
     -- add midi to file -- file.write(combinedName .. "/" .. mid,content,"a") -- append on file
     end
@@ -55,7 +60,41 @@ print(#testList)
 return testList
 end
 
-print(#getFiles("./MIDI"))
+function createTorchContainers(files)
+
+for i=1,#files,1000 
+do
+local cont = {data={}, files={}}
+local count = 0
+print(i)
+for j=i,i+1000
+do
+
+if j > #files then
+break
+end
+
+--print(j)
+local data = midiToBinaryVec(files[j])
+
+if data ~= nil then
+
+count = count + 1
+cont.files[count] = files[j]
+cont.data[count] = data
+
+end
+
+end
+
+torch.save("midi" .. i .. ".dat", cont)
+
+end
+
+end
+
+--print(createTorchContainers(getFiles('./MIDI','.mid')) )
+--print(#getFiles("./MIDI"))
 
 -- move files into the proper classification folder
 
