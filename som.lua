@@ -49,38 +49,47 @@ crit=nn.HingeEmbeddingCriterion(1)
 criterion = nn.ClassNLLCriterion()
 
 --- Richards model
-model = nn.Sequential()
+--model = nn.Sequential()
 
 --model:add(nn.Reshape(1,128,512))
 --model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
-model:add(nn.SpatialConvolution(1, 6, 5, 5))
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-model:add(nn.SpatialConvolution(6, 16, 5,5))
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-model:add(nn.View(16 * 125 * 29))
-model:add(nn.Linear(16 * 125 * 29, 256))
-model:add(nn.Tanh())
-model:add(nn.Dropout(0.2))
---model:add(nn.Linear(256, #classes))
-model:add(nn.Linear(256,128*512))
-model:add(nn.ReLU())
-model:add(nn.Linear(128*512,10))
+--model:add(nn.SpatialConvolution(1, 6, 5, 5))
+--model:add(nn.SpatialMaxPooling(2,2,2,2))
+--model:add(nn.SpatialConvolution(6, 16, 5,5))
+--model:add(nn.SpatialMaxPooling(2,2,2,2))
+--model:add(nn.View(16 * 125 * 29))
+--model:add(nn.Linear(16 * 125 * 29, 256))
 --model:add(nn.Tanh())
+--model:add(nn.Dropout(0.2))
+local sized = 1000*128 
+model = nn.Sequential()
+--model:add(nn.View(2*1000*128))
+model:add(nn.Linear(sized, 256))
+model:add(nn.Dropout(.1))
+model:add(nn.Tanh())
+model:add(nn.Linear(256,sized))
+model:add(nn.ReLU())
+model:add(nn.Linear(sized, 10))
 model:add(nn.LogSoftMax())
+--model:add(nn.Linear(256, #classes))
+--model:add(nn.Linear(256,128*512))
+--model:add(nn.ReLU())
+--model:add(nn.Linear(128*512,10))
+--model:add(nn.Tanh())
+--model:add(nn.LogSoftMax())
 model2 = model
 model2:cuda()
 
 print("MODEL LOADED")
 model = nn.Sequential()
-model:add(nn.Reshape(1,128,512))
-model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
+model:add(nn.View(sized))
+--model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
 model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
 model:add(model2)
 model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
 
-local numofw = 11
+local numofw = 6
 --distance2 = nn.Euclidean(128*512,128*512)
-
 
 -- GetClass
 function getClass(input,weights,numberOfClasses,inputWidth)
@@ -92,14 +101,18 @@ function getClass(input,weights,numberOfClasses,inputWidth)
   --print(numberOfClasses)
   --print(weights[1]:size())
   --print(input:size())
-  a = nn.View(512*128)
+  --print(input:size())
+  a = nn.View(sized)
   local inp = a:forward(input)
   --print(inp[1]:size())
   for i=1,numberOfClasses do
     --print(inp)
     --print(weights[i])
-    if torch.dist(inp,weights[i]) > max then
+      --print(inp:size())
+      --print(weights[i]:size())
+      if torch.dist(inp,weights[i]) > max then
       class = i
+
       max = torch.dist(inp,weights[i])
     end
 
@@ -247,7 +260,7 @@ function train()
                           --print("Labels: " .. l[i] .. " " .. trainData.Labels[t])
                           --print(model:get(12))
                           local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
-                          local cla = getClass(inputs[l],W,classes,128*512)
+                          local cla = getClass(inputs[l],W,classes,sized)
                           local err = criterion:forward(output,cla)--gradUpdate({inputs[1],targets[i]},1,crit,optim.learningRate)--criterion:forward(output, inputs[1])
                           f = f + err
 
@@ -321,6 +334,7 @@ end
 
 
 
+
 function test()
    -- local vars
    local time = sys.clock()
@@ -348,7 +362,7 @@ function test()
       -- test sample
       --local splitted = input:split(spl,1)
       ---                          for j = 1,#splitted do
-         --                 if splitted[j]:size(1) * splitted[j]:size(2) ~= 128*spl then
+         --                 if splitted[j]:size(1) * splitted[j]:size(2) ~= spl then
            --                break
              --           end
       local pred = model:forward(input)
@@ -385,14 +399,15 @@ function test()
    
    -- next iteration:
    confusion:zero()
+
 end
 
 
 clusterfile = "cluster"
 
-for i = 1, 40 do
+for i = 1, 20 do
     print("Epoch: " .. i)
-        if i%1 == 0 then
+        if i%2 == 0 then
       for j = 1,classes do
         file.write(clusterfile .. j .. ".txt","")
       end
@@ -405,9 +420,11 @@ for i = 1, 40 do
         xlua.progress(k, #files ) 
         --if DETA ~= nil then
         for detas = 1,#DETA.files do
+--print(DETA.data[detas])
         xlua.progress(detas, #DETA.files ) 
-        output = model:forward(DETA.data[detas])
-        local group = getClass(DETA.data[detas],W,classes,128*512)
+        --output = model:forward(DETA.data[detas])
+        --print(DETA.data[detas])
+        local group = getClass(DETA.data[detas],W,classes,sized)
         file.write(clusterfile .. group .. ".txt",DETA.files[detas] .. "\n","a")
         --end
         end
