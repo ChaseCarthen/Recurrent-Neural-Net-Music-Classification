@@ -43,10 +43,10 @@ mlp2:add(prl)
 mlp2:add(nn.PairwiseDistance(3))
 
 -- and a criterion for pushing together or pulling apart pairs
-crit=nn.HingeEmbeddingCriterion(1)
+--crit=nn.HingeEmbeddingCriterion(1)
 
 
-criterion = nn.ClassNLLCriterion()
+--criterion = nn.ClassNLLCriterion()
 
 --- Richards model
 --model = nn.Sequential()
@@ -61,21 +61,22 @@ criterion = nn.ClassNLLCriterion()
 --model:add(nn.Linear(16 * 125 * 29, 256))
 --model:add(nn.Tanh())
 --model:add(nn.Dropout(0.2))
-local sized = 1000*128 
+local sized = 2*1000*128 
 model = nn.Sequential()
 --model:add(nn.View(2*1000*128))
-model:add(nn.Linear(sized, 256))
-model:add(nn.Dropout(.1))
-model:add(nn.Tanh())
-model:add(nn.Linear(256,sized))
-model:add(nn.ReLU())
+--model:add(nn.Linear(sized, 256))
+--model:add(nn.Dropout(.1))
+--model:add(nn.Tanh())
+--model:add(nn.Linear(256,sized))
+--model:add(nn.Tanh())
 model:add(nn.Linear(sized, 10))
+--model:add(nn.ReLU())
 model:add(nn.LogSoftMax())
 --model:add(nn.Linear(256, #classes))
 --model:add(nn.Linear(256,128*512))
---model:add(nn.ReLU())
+
 --model:add(nn.Linear(128*512,10))
---model:add(nn.Tanh())
+--model:add(nn.Tanh())c
 --model:add(nn.LogSoftMax())
 model2 = model
 model2:cuda()
@@ -88,38 +89,41 @@ model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
 model:add(model2)
 model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
 
-local numofw = 6
+local numofw = 1
 --distance2 = nn.Euclidean(128*512,128*512)
 
 -- GetClass
 function getClass(input,weights,numberOfClasses,inputWidth)
   --print("GETCLASS")
   
-  local max = 0
+  local max = 1000000000000
   local class = 1 
   --print("GetClass")
   --print(numberOfClasses)
   --print(weights[1]:size())
   --print(input:size())
   --print(input:size())
-  a = nn.View(sized)
+  local a = nn.View(sized)
   local inp = a:forward(input)
+  local dists = torch.zeros(numberOfClasses)
   --print(inp[1]:size())
   for i=1,numberOfClasses do
     --print(inp)
     --print(weights[i])
       --print(inp:size())
       --print(weights[i]:size())
-      if torch.dist(inp,weights[i]) > max then
+      local dist = torch.dist(inp,weights[i])
+      dists[i] = dist
+      if dist < max then
       class = i
 
-      max = torch.dist(inp,weights[i])
+      max = dist
     end
 
 
   end
   --print(class)
-  return class
+  return class,dists,max
 end
 
 
@@ -160,7 +164,7 @@ classes = 10
 --print(model:forward(ab))
 --print(model:forward(a))
 --Step 3: Defne Our Loss Function
---criterion = nn.MultiMarginCriterion()
+criterion = nn.MultiMarginCriterion()
 --criterion = nn.ClassNLLCriterion()
 --criterion = nn.AbsCriterion()
 --criterion = nn.MSECriterion()
@@ -223,79 +227,37 @@ function train()
 
    loss = 0
    for t = 1, #files do
+
+      collectgarbage()
       xlua.progress(t, #files ) 
       
       local inputs = torch.load(files[shuffle[t]]).data
+      collectgarbage()
       for l = 1, #inputs do
       xlua.progress(l, #inputs ) 
-      --trainData.Songs[t]
-      --print(files[t])
-      --print(inputs[1]:size())
 
-      
-
+    
+              if(inputs[l]:size(1) == 2)
+      then
       -- create closure to evaluate f(X) and df/dX
-      local feval = function(x)
-                       -- get new parameters
-                       if x ~= parameters then
-                          parameters:copy(x)
-                       end
-
-                       -- reset gradients
-                       gradParameters:zero()
-
-                       -- f is the average of all criterions
-                       local f = 0
-                       local spl_counter = 0
-                       local songs = {}
-
-                       --for i = 1,1 do
-                          --print(1)
-                          --print(classes)
-                          spl_counter  = spl_counter+1
-                          counter = counter+1
-
-                          local output = model:forward(inputs[l])
-                          --local output2 = model:forward(targets[i])
-                          --print("Labels: " .. l[i] .. " " .. trainData.Labels[t])
-                          --print(model:get(12))
+     
                           local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
-                          local cla = getClass(inputs[l],W,classes,sized)
-                          local err = criterion:forward(output,cla)--gradUpdate({inputs[1],targets[i]},1,crit,optim.learningRate)--criterion:forward(output, inputs[1])
-                          f = f + err
+                          local cla,distance,best = getClass(inputs[l],W,classes,sized)
+                          --print(distance)
+                          --print(W:norm() .. " CLASS: " .. cla)
+                          for c=1,classes do
+                          W[c] = W[c] + (inputs[l]-W[c])*.00001*torch.dist(W[c],W[cla])
+                          end
+                          model2:get(numofw).weight = W
 
-                          
-                          -- estimate df/dW
-                          --local df_do = criterion:backward(output, inputs[1])
-                          --model:backward(inputs[i], df_do)
-                          local df_do = criterion:backward(output, cla)
-                          --print(df_do)
-                          model:backward(inputs[1], df_do)
-                          --songs[j] = (output)
-                          --confusion:add(output, cla)
-                          
-
-                       --end
-
-                       -- normalize gradients and f(X)
-                       gradParameters:div(spl_counter)
-                       f = f/spl_counter
-                       --print(spl_counter)
-                       --print("Returning from feval")
-                       -- return f and df/dX
-                       return f,gradParameters
-                    end
-
-        _,fs2 = optim.sgd(feval, parameters, optimState)
-        --print(fs2)
-        loss = loss + fs2[1]
         end
+    end
 
         --print("After optim.sgd")
    end
 
     --print("Before taking time")
-    print(loss/#files)
+    --print(loss/#files)
     --print(trainData:size())
    -- time taken
    time = sys.clock() - time
@@ -303,7 +265,7 @@ function train()
    --print("\n==> time to learn 1 sample = " .. (time*1000) .. 'ms')
 
    -- print confusion matrix
-   --print(confusion)
+   print(confusion)
 
    -- update logger/plot
    trainLogger:add{['% mean class accuracy (train set)'] = confusion.totalValid * 100}
@@ -321,7 +283,7 @@ function train()
    end
 
    -- next epoch
-   --confusion:zero()
+   confusion:zero()
    epoch = epoch + 1
 end
 --train()
@@ -381,8 +343,7 @@ function test()
    time = time / testData:size()
    print("\n==> time to test 1 sample = " .. (time*1000) .. 'ms')
 
-   -- print confusion matrix
-   print(confusion)
+
 
    -- update log/plot
    testLogger:add{['% mean class accuracy (test set)'] = confusion.totalValid * 100}
@@ -396,7 +357,9 @@ function test()
       -- restore parameters
       parameters:copy(cachedparams)
    end
-   
+
+   -- print confusion matrix
+   print(confusion)
    -- next iteration:
    confusion:zero()
 
@@ -421,12 +384,17 @@ for i = 1, 20 do
         --if DETA ~= nil then
         for detas = 1,#DETA.files do
 --print(DETA.data[detas])
+        if DETA.data[detas]:size(1) == 2
+        then
         xlua.progress(detas, #DETA.files ) 
         --output = model:forward(DETA.data[detas])
         --print(DETA.data[detas])
         local group = getClass(DETA.data[detas],W,classes,sized)
+        --print(detas .. "File: " .. DETA.files[detas] )
         file.write(clusterfile .. group .. ".txt",DETA.files[detas] .. "\n","a")
         --end
+        end
+        collectgarbage()
         end
       end
 

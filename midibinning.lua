@@ -62,12 +62,12 @@ end
 
 function createTorchContainers(files)
 
-for i=1,#files,1000 
+for i=1,#files,100 
 do
 local cont = {data={}, files={}}
 local count = 0
 print(i)
-for j=i,i+1000
+for j=i,i+100
 do
 
 if j > #files then
@@ -82,6 +82,11 @@ if data ~= nil then
 count = count + 1
 cont.files[count] = files[j]
 cont.data[count] = data
+print(data:size(1))
+if (data:size(1)==1)
+then
+   midiToBinaryVec = nil
+end
 
 end
 
@@ -93,7 +98,7 @@ end
 
 end
 
---print(createTorchContainers(getFiles('./MIDI','.mid')) )
+--print(createTorchContainers(getFiles('./music','.mid')) )
 --print(#getFiles("./MIDI"))
 
 -- move files into the proper classification folder

@@ -29,7 +29,7 @@ setIntensity = function(binVector,note,i,intensity)
   if(binVector[1][note][i] < intensity) then
   	binVector[1][note][i] = intensity
   end
-  --binVector[2][note][i] = (binVector[2][note][i] + intensity )
+  binVector[2][note][i] = (binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])
 end
@@ -84,7 +84,7 @@ midiToBinaryVec = function(filename)
     f:close()
     -- need to allocate array to feeat everything into
     --local binVector = allocate_array(array_row,array_col)
-    local binVector = torch.Tensor(1,array_row,array_col):zero()
+    local binVector = torch.Tensor(2,array_row,array_col):zero()
     --print(binVector)
     --print(image.scale(binVector,128,512))
     --local binVector2 = torch.Tensor(1,array_row,array_col):zero()
@@ -122,7 +122,9 @@ midiToBinaryVec = function(filename)
     --binVector2 = torch.Tensor(binVector)
     --print(array_col)
     --print(#binVector)
-    return image.scale(binVector,128,1000)
+    --image.save('test.pgm',binVector[1])
+    --image.save('test2.pgm',binVector[2])
+    return image.scale(binVector,1000,128)
 end
 
 
