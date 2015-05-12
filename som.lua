@@ -42,6 +42,9 @@ mlp2= nn.Sequential()
 mlp2:add(prl)
 mlp2:add(nn.PairwiseDistance(3))
 
+local c2d2 = nn.Sequential()
+c2d2:add(nn.PairwiseDistance(1))
+c2d2:cuda()
 -- and a criterion for pushing together or pulling apart pairs
 --crit=nn.HingeEmbeddingCriterion(1)
 
@@ -69,7 +72,7 @@ model = nn.Sequential()
 --model:add(nn.Tanh())
 --model:add(nn.Linear(256,sized))
 --model:add(nn.Tanh())
-model:add(nn.Linear(sized, 10))
+model:add(nn.Linear(sized, 20))
 --model:add(nn.ReLU())
 model:add(nn.LogSoftMax())
 --model:add(nn.Linear(256, #classes))
@@ -81,12 +84,13 @@ model:add(nn.LogSoftMax())
 model2 = model
 model2:cuda()
 
+local W = torch.randn(20,sized) 
 print("MODEL LOADED")
 model = nn.Sequential()
 model:add(nn.View(sized))
 --model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
 model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
-model:add(model2)
+model:add(c2d2)
 model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
 
 local numofw = 1
@@ -112,7 +116,7 @@ function getClass(input,weights,numberOfClasses,inputWidth)
     --print(weights[i])
       --print(inp:size())
       --print(weights[i]:size())
-      local dist = torch.dist(inp,weights[i])
+      local dist = inp:dist(weights[i])
       dists[i] = dist
       if dist < max then
       class = i
@@ -159,7 +163,7 @@ end
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
 --print(classes)
-classes = 10
+classes = 20
 
 --print(model:forward(ab))
 --print(model:forward(a))
@@ -241,14 +245,16 @@ function train()
       then
       -- create closure to evaluate f(X) and df/dX
      
-                          local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
+                          --local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
                           local cla,distance,best = getClass(inputs[l],W,classes,sized)
                           --print(distance)
                           --print(W:norm() .. " CLASS: " .. cla)
-                          for c=1,classes do
-                          W[c] = W[c] + (inputs[l]-W[c])*.00001*torch.dist(W[c],W[cla])
+                          for c=1,classes 
+                          do
+                          W[c] = W[c] + (inputs[l]-W[c])*.001*W[c]:dist(W[cla])
                           end
-                          model2:get(numofw).weight = W
+                         --confusion:add(cla,cla)
+                          --model2:get(numofw).weight = W
 
         end
     end
@@ -368,7 +374,7 @@ end
 
 clusterfile = "cluster"
 
-for i = 1, 20 do
+for i = 1, 60 do
     print("Epoch: " .. i)
         if i%2 == 0 then
       for j = 1,classes do
@@ -376,7 +382,7 @@ for i = 1, 20 do
       end
       print("Writing to Clusters")
 
-      local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
+      --local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
       --print(trainData)
       for k =1,#files do
         local DETA = torch.load(files[k])
