@@ -29,7 +29,7 @@ setIntensity = function(binVector,note,i,intensity)
   if(binVector[1][note][i] < intensity) then
   	binVector[1][note][i] = intensity
   end
-  binVector[2][note][i] = (binVector[2][note][i] + 1 )
+  binVector[2][note][i] = 255--(binVector[2][note][i] + 1 )
   --if(binVector[note])
   --print(binVector[note][i])
 end
@@ -38,6 +38,7 @@ end
 midiToBinaryVec = function(filename)
     --print(filename)
     -- read the file
+    local MaxTicks = 100000
     local f = assert(io.open(filename, "r"))
     local t = f:read("*all")
     if t == nil then
@@ -57,7 +58,7 @@ midiToBinaryVec = function(filename)
 
     -- get the the total ticks in a midi
     local total_ticks =  midi.score2stats(m)["nticks"]
-    --print(total_ticks)
+    print(total_ticks)
     -- get the number of channels
     numchannels = table.getn(m)
 
@@ -77,8 +78,8 @@ midiToBinaryVec = function(filename)
     -- determing the overall array length using total ticks / smallest furation
     
     array_col = total_ticks
-    if total_ticks > 15000 then
-    	array_col = 15000
+    if total_ticks > MaxTicks then
+    	array_col = MaxTicks
     end
     array_row = 128 -- The number of midis notes, this can be made better.
     f:close()
@@ -92,11 +93,12 @@ midiToBinaryVec = function(filename)
     --print(notes)
     ma = require "math"
     -- fit all notes
-
+    min = 1
     for k,n in pairs(notes)
     do
 	    --print(k)
-	    --print(n) 
+	    --print(n)
+      if n[3] < MaxTicks then 
 	    local fr = ma.min((n[2])/(min) + 1,array_col)
 	    local to = ma.min((n[2]+n[3])/(min)+1,array_col)
 	    --print(fr, to)
@@ -113,17 +115,21 @@ midiToBinaryVec = function(filename)
 			    print(ok)
 			   return nil
 		    else
-		   --print ("Okay: ")
-		   	break 
+		    print ("Okay: " .. i .. " " .. fr .. " " .. to)
+		   	--break 
   	    	    end
     --if(intensity/100~=.96) then print(intensity/128) end
     	    end
+    end
     end 
     --binVector2 = torch.Tensor(binVector)
     --print(array_col)
     --print(#binVector)
     --image.save('test.pgm',binVector[1])
     --image.save('test2.pgm',binVector[2])
+    --print(binVector[1])
+    image.savePNG("tst.png",binVector[2])
+    image.savePGM("tst.pgm",binVector[2])
     return image.scale(binVector,1000,128)
 end
 

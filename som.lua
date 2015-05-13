@@ -9,7 +9,7 @@ require 'lfs'
 require 'nnx'
 require 'midibinning'
 --require 'cunnx'
-require 'cunn'
+--require 'cunn'
 local file = require 'file'
 
 local files = getFiles("./midibins",'.dat')
@@ -43,8 +43,8 @@ mlp2:add(prl)
 mlp2:add(nn.PairwiseDistance(3))
 
 local c2d2 = nn.Sequential()
-c2d2:add(nn.PairwiseDistance(1))
-c2d2:cuda()
+--c2d2:add(nn.PairwiseDistance(1))
+--c2d2:cuda()
 -- and a criterion for pushing together or pulling apart pairs
 --crit=nn.HingeEmbeddingCriterion(1)
 
@@ -82,16 +82,16 @@ model:add(nn.LogSoftMax())
 --model:add(nn.Tanh())c
 --model:add(nn.LogSoftMax())
 model2 = model
-model2:cuda()
+--model2:cuda()
 
 local W = torch.randn(20,sized) 
 print("MODEL LOADED")
 model = nn.Sequential()
 model:add(nn.View(sized))
 --model:add(nn.SpatialContrastiveNormalization(1,image.gaussian1D(5)))
-model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
-model:add(c2d2)
-model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
+--model:add(nn.Copy('torch.DoubleTensor', 'torch.CudaTensor'))
+--model:add(c2d2)
+--model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
 
 local numofw = 1
 --distance2 = nn.Euclidean(128*512,128*512)
