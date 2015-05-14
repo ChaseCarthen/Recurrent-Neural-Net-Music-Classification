@@ -62,12 +62,12 @@ end
 
 function createTorchContainers(files)
 
-for i=1,#files,100 
+for i=1,#files,3000 
 do
 local cont = {data={}, files={}}
 local count = 0
 print(i)
-for j=i,i+100
+for j=i,i+3000
 do
 
 if j > #files then

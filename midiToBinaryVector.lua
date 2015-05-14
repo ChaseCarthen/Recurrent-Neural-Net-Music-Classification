@@ -38,7 +38,7 @@ end
 midiToBinaryVec = function(filename)
     --print(filename)
     -- read the file
-    local MaxTicks = 100000
+    local MaxTicks = 15000
     local f = assert(io.open(filename, "r"))
     local t = f:read("*all")
     if t == nil then
@@ -58,7 +58,7 @@ midiToBinaryVec = function(filename)
 
     -- get the the total ticks in a midi
     local total_ticks =  midi.score2stats(m)["nticks"]
-    print(total_ticks)
+    --print(total_ticks)
     -- get the number of channels
     numchannels = table.getn(m)
 
@@ -115,8 +115,8 @@ midiToBinaryVec = function(filename)
 			    print(ok)
 			   return nil
 		    else
-		    print ("Okay: " .. i .. " " .. fr .. " " .. to)
-		   	--break 
+		    --print ("Okay: " .. i .. " " .. fr .. " " .. to)
+		   	break 
   	    	    end
     --if(intensity/100~=.96) then print(intensity/128) end
     	    end
@@ -128,9 +128,9 @@ midiToBinaryVec = function(filename)
     --image.save('test.pgm',binVector[1])
     --image.save('test2.pgm',binVector[2])
     --print(binVector[1])
-    image.savePNG("tst.png",binVector[2])
-    image.savePGM("tst.pgm",binVector[2])
-    return image.scale(binVector,1000,128)
+    --image.savePNG("tst.png",binVector[2])
+    --image.savePGM("tst.pgm",binVector[2])
+    return image.scale(binVector,500,128)
 end
 
 
