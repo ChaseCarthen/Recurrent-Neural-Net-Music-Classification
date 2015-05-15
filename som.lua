@@ -28,7 +28,8 @@ function train()
 
    -- epoch tracker
    epoch = epoch or 1
-
+   local maxmindist = -1000000000000
+   local err = 0
    local counter = 1
    -- local vars
    local time = sys.clock()
@@ -52,14 +53,21 @@ function train()
       if inputs[m]:size(1) == 2 then
       --print(inputs[m]:size())
       
-      local class = model:forward(shape:forward(inputs[m]))
+      local class,distance = model:forward(shape:forward(inputs[m]))
+
+      if maxmindist < distance then
+      maxmindist = distance
+      end
+      
       --print("Class" .. class)
-      model:backward(shape:forward(inputs[m]),class)
+      err = model:backward(shape:forward(inputs[m]),class) + err
       
       end
       collectgarbage()
       end
    end
+   print("Error: " .. err)
+   print("Max Minimum Distance" .. maxmindist)
 
    print("Saving the model")
    model:save("model.net")
@@ -73,9 +81,13 @@ end
 
 clusterfile = "cluster"
 
-for i = 1, 60 do
+for i = 1, 200 do
     print("Epoch: " .. i)
-        if i%2 == 0 then
+    print("Learning Rate: " .. model:learningRate())
+    print("Lattice" .. model:latticeAtTimeT())
+    --print(model:update())
+    --print( model:learningRate())
+        if i%5 == 0 then
       for j = 1,classes do
         file.write(clusterfile .. j .. ".txt","")
       end
