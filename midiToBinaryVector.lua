@@ -116,7 +116,7 @@ midiToBinaryVec = function(filename)
 			   return nil
 		    else
 		    --print ("Okay: " .. i .. " " .. fr .. " " .. to)
-		   	--break 
+		   	break 
   	    	    end
     --if(intensity/100~=.96) then print(intensity/128) end
     	    end

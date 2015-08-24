@@ -18,7 +18,7 @@ local file = require 'file'
 local files = getFiles("./midibins",'.dat')
 print(files)
 classes = 10
-model = SOM.create(2*500*128,classes)
+model = SOM.create(2*500*128,4,4,200)
 model:cuda()
 
 epoch = 1
@@ -28,7 +28,7 @@ function train()
 
    -- epoch tracker
    epoch = epoch or 1
-   local maxmindist = -1000000000000
+   local maxmindist = 1000000000000
    local err = 0
    local counter = 1
    -- local vars
@@ -55,7 +55,7 @@ function train()
       
       local class,distance = model:forward(shape:forward(inputs[m]))
 
-      if maxmindist < distance then
+      if maxmindist > distance then
       maxmindist = distance
       end
       
@@ -87,10 +87,11 @@ for i = 1, 200 do
     print("Lattice" .. model:latticeAtTimeT())
     --print(model:update())
     --print( model:learningRate())
-        if i%5 == 0 then
-      for j = 1,classes do
-        file.write(clusterfile .. j .. ".txt","")
-      end
+        if i%4 == 0 then
+      --for j = 1,classes do
+       -- file.write(clusterfile .. j .. ".txt","")
+      --end
+      os.execute('rm cluster*.txt')
       print("Writing to Clusters")
 
       --local W = nn.Copy('torch.CudaTensor', 'torch.FloatTensor'):forward(model2:get(numofw).weight)
