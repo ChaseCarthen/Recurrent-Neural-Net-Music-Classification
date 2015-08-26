@@ -11,6 +11,9 @@ require 'lfs'
 require 'nnx'
 require 'midibinning'
 require 'SOM'
+require 'writeMidi'
+require 'image'
+
 --require 'cunnx'
 --require 'cunn'
 local file = require 'file'
@@ -19,12 +22,12 @@ local files = getFiles("./midibins",'.dat')
 print(files)
 print(#files)
 classes = 10
-model = SOM.create(2*500*128,4,4,200)
+model = SOM.create(128,500,4,4,200)
 model:cuda()
 
 epoch = 1
 batch_size = 10
-local shape = nn.Reshape(2*500*128)
+
 function train()
 
    -- epoch tracker
@@ -45,34 +48,34 @@ function train()
    loss = 0
    for t = 1, #files do
 
-      collectgarbage()
-      xlua.progress(t, #files ) 
-      
-      local inputs = torch.load(files[shuffle[t]]).data
-      for m=1,#inputs do
+    collectgarbage()
+    xlua.progress(t, #files ) 
+
+    local inputs = torch.load(files[shuffle[t]]).data
+    for m=1,#inputs do
       xlua.progress(m,#inputs)
-      if inputs[m]:size(1) == 2 then
+      if inputs[m]:size(1) == 1 then
       --print(inputs[m]:size())
       
-      local class,distance = model:forward(shape:forward(inputs[m]))
+      local class,distance = model:forward(inputs[m])
 
       if maxmindist > distance then
-      maxmindist = distance
+        maxmindist = distance
       end
       
       --print("Class" .. class)
-      err = model:backward(shape:forward(inputs[m]),class) + err
-      
-      end
-      collectgarbage()
-      end
-   end
-   print("Error: " .. err)
-   print("Max Minimum Distance" .. maxmindist)
+      err = model:backward(inputs[m][1],class) + err
 
-   print("Saving the model")
-   model:save("model.net")
-   epoch = epoch + 1
+end
+collectgarbage()
+end
+end
+print("Error: " .. err)
+print("Max Minimum Distance" .. maxmindist)
+
+print("Saving the model")
+model:save("model.net")
+epoch = epoch + 1
 
 end
 
@@ -83,15 +86,23 @@ end
 clusterfile = "cluster"
 
 for i = 1, 200 do
-    print("Epoch: " .. i)
-    print("Learning Rate: " .. model:learningRate())
-    print("Lattice" .. model:latticeAtTimeT())
+  print("Epoch: " .. i)
+  print("Learning Rate: " .. model:learningRate())
+  print("Lattice" .. model:latticeAtTimeT())
     --print(model:update())
     --print( model:learningRate())
-        if i%4 == 0 then
-      --for j = 1,classes do
-       -- file.write(clusterfile .. j .. ".txt","")
-      --end
+    if i%4 == 0 then
+      for l=1,4 do
+      for m=1,4 do
+        local val = model.weights[l][m]:double()
+        val = val:round()
+        local ma = val:max()
+        local mi = val:min()
+        val = (val - mi) / (ma - mi) * 255
+        writeMidi("f".. l .. "," .. m .. "epoch".. i .. ".mid",val,40,100)
+        image.save("f".. l .. "," .. m .. "epoch".. i ..".png",val)
+      end
+      end
       os.execute('rm cluster*.txt')
       print("Writing to Clusters")
 
@@ -102,27 +113,28 @@ for i = 1, 200 do
         xlua.progress(k, #files ) 
         --if DETA ~= nil then
         for detas = 1,#DETA.files do
---print(DETA.data[detas])
-        if DETA.data[detas]:size(1) == 2
-        then
-        xlua.progress(detas, #DETA.files ) 
+--print(DETA.data)
+if DETA.data[detas]:size(1) == 1
+  then
+  xlua.progress(detas, #DETA.files ) 
         --output = model:forward(DETA.data[detas])
         --print(DETA.data[detas])
-        local group = model:forward(shape:forward(DETA.data[detas]))
+        local group = model:forward(DETA.data[detas][1])
         --print(detas .. "File: " .. DETA.files[detas] )
         file.write(clusterfile .. group .. ".txt",DETA.files[detas] .. "\n","a")
         --end
-        end
-        collectgarbage()
-        end
       end
-
-
+      collectgarbage()
     end
-    train()
-    model:update()
+  end
+
+
+end
+print("TRAIN")
+train()
+model:update()
 
 
     --test()
-end
+  end
 

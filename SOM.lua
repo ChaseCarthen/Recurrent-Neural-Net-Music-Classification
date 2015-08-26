@@ -5,11 +5,11 @@ require 'math'
 SOM = {}
 SOM.__index = SOM
 ---http://chem-eng.utoronto.ca/~datamining/Presentations/SOM.pdf
-function SOM.create(weights,Width,Height,epoch)
+function SOM.create(weightsw,weightsh,Width,Height,epoch)
    local W = {}
    setmetatable(W,SOM)
    
-   W.weights = torch.randn(Width,Height,weights):uniform()
+   W.weights = torch.randn(Width,Height,weightsw,weightsh):uniform()
    W.width = Width
    W.height = Height
    W.lattice = math.max(Width,Height)
