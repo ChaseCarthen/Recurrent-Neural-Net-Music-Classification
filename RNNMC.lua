@@ -10,7 +10,7 @@ require 'lfs'
 
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./miniMusic", .8)
+trainData, testData, classes = GetTrainAndTestData{BaseDir="./smusic", Ratio1=.8}
 
 
 --Step 2: Create the model

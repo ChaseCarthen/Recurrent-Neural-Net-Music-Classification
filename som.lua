@@ -17,6 +17,7 @@ local file = require 'file'
 
 local files = getFiles("./midibins",'.dat')
 print(files)
+print(#files)
 classes = 10
 model = SOM.create(2*500*128,4,4,200)
 model:cuda()
@@ -38,7 +39,7 @@ function train()
   -- model:training()
    --print(#trainData)
    -- shuffle at each epoch
-   --print(files)
+   print(#files)
    shuffle = torch.randperm(#files)
 
    loss = 0
