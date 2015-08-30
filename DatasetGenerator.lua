@@ -2,6 +2,7 @@ local torch = require 'torch'
 local midi = require 'MIDI'
 require 'audio'
 mtbv = require "midiToBinaryVector"
+require 'image'
 require 'lfs'
 
 
@@ -72,7 +73,7 @@ function GatherAudioData(BaseDir,Container)
                 fileCounter = fileCounter + 1
                 data = audio.load(FullFilePath)
                 if type(data) == "userdata" and data:size()[1] == 1 then
-                    data = audio.spectrogram(data, 8092,'hann',4096)
+                    data = image.scale(audio.spectrogram(data, 8092,'hann',4096),1000,128)
                 end
                 obj.Songs[fileCounter] = data
             end
@@ -137,7 +138,15 @@ function SplitAudioData(data, ratio)
 end
 
 
-function SplitAudioData2(data, ratio,ratio2)
+function SplitAudioData2(data, ratio,ratio2) 
+    if paths.filep('./test.t7') and paths.filep('./train.t7') and paths.filep('validation.t7') and paths.filep('./classes.t7') then
+    	testData = torch.load('./test.t7')
+        trainData = torch.load('./train.t7')
+        validationData = torch.load('./validation.t7')
+        classes = torch.load('classes.t7')
+        return trainData, testData, validationData, classes
+    end
+
     local trainData = {Labels={}, Songs={}, GenreSizes={}}
     local testData = {Labels={}, Songs={}, GenreSizes={}}
     local validationData = {Labels={},Songs={},GenreSizes={}}
@@ -182,6 +191,10 @@ function SplitAudioData2(data, ratio,ratio2)
 
     end    
 
+   torch.save('./test.t7',testData)
+   torch.save('./train.t7',trainData)
+   torch.save('./validation.t7',validationData)
+   torch.save('./classes.t7',classes)
 
     return trainData, testData, validationData, classes
 end

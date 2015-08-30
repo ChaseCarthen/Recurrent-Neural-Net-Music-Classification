@@ -1,2 +1,2 @@
 require 'midibinning'
-createTorchContainers(getFiles('./smusic','.mid'))
+createTorchContainers(getFiles('./genres','.au'))

@@ -22,7 +22,7 @@ local files = getFiles("./midibins",'.dat')
 print(files)
 print(#files)
 classes = 10
-model = SOM.create(128,500,4,4,200)
+model = SOM.create(128,512,4,4,200)
 model:cuda()
 
 epoch = 1
@@ -54,7 +54,7 @@ function train()
     local inputs = torch.load(files[shuffle[t]]).data
     for m=1,#inputs do
       xlua.progress(m,#inputs)
-      if inputs[m]:size(1) == 1 then
+      if inputs[m]:size(1) == 128 then
       --print(inputs[m]:size())
       
       local class,distance = model:forward(inputs[m])
@@ -64,7 +64,7 @@ function train()
       end
       
       --print("Class" .. class)
-      err = model:backward(inputs[m][1],class) + err
+      err = model:backward(inputs[m],class) + err
 
 end
 collectgarbage()
@@ -114,12 +114,12 @@ for i = 1, 200 do
         --if DETA ~= nil then
         for detas = 1,#DETA.files do
 --print(DETA.data)
-if DETA.data[detas]:size(1) == 1
+if DETA.data[detas]:size(1) == 128
   then
   xlua.progress(detas, #DETA.files ) 
         --output = model:forward(DETA.data[detas])
         --print(DETA.data[detas])
-        local group = model:forward(DETA.data[detas][1])
+        local group = model:forward(DETA.data[detas])
         --print(detas .. "File: " .. DETA.files[detas] )
         file.write(clusterfile .. group .. ".txt",DETA.files[detas] .. "\n","a")
         --end

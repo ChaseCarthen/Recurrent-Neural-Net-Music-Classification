@@ -1,6 +1,7 @@
 require 'lfs'
 require 'nn'
 require 'audio'
+require 'image'
 file = require 'file' -- Get this guy from https://github.com/gummesson/file.lua
 
 local midi = require 'MIDI'
@@ -90,7 +91,7 @@ function createTorchContainers(files)
     else -- load audio
         data = audio.load(files[j])
         if type(data) == "userdata" and data:size()[1] == 1 then
-            data = audio.spectrogram(data, 8092,'hann',4096)
+            data = image.scale(audio.spectrogram(data, 8092,'hann',4096),512,128)
         end
         count = count + 1
         cont.files[count] = files[j]
