@@ -73,7 +73,7 @@ function GatherAudioData(BaseDir,Container)
                 fileCounter = fileCounter + 1
                 data = audio.load(FullFilePath)
                 if type(data) == "userdata" and data:size()[1] == 1 then
-                    data = signal.stft(data[1], 8092,4096)--image.scale(,1000,128)
+                    data = image.scale(audio.stft(data, 8092,'hann',4096)),2,100)
                 end
                 obj.Songs[fileCounter] = data
             end
