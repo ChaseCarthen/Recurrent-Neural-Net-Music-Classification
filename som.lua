@@ -54,6 +54,7 @@ function train()
     local inputs = torch.load(files[shuffle[t]]).data
     for m=1,#inputs do
       xlua.progress(m,#inputs)
+      print(inputs[m]:size(1))
       if inputs[m]:size(1) == 128 then
       --print(inputs[m]:size())
       

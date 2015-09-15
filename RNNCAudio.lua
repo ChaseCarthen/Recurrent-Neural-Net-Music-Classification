@@ -29,7 +29,7 @@ trainData = {}
 testData = {}
 classes = {}
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
-trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./genres",Ratio=.8,Ratio2=.1}
+trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./audio",Ratio=.8,Ratio2=.1}
 
 
 
@@ -40,7 +40,7 @@ print(trainData.Labels[1])
 Cudaify = function (mlp)
 	mlp:cuda()
 	local model = nn.Sequential()
-	model:add(nn.Reshape(2*500*128))
+	model:add(nn.Reshape(2*100*160))
 	model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'))
 	model:add(mlp)
 	model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
@@ -63,9 +63,9 @@ DefaultModel = function(num_output)
 	--16 layers, 30x125 image
         if not cuda then
         print("view")
-	mlp:add(nn.View(2*500*128))
+	mlp:add(nn.View(2*100*160))
         end
-	mlp:add(nn.Linear(2*500*128, 100))
+	mlp:add(nn.Linear(2*100*160, 100))
 	mlp:add(nn.Dropout(.1))
 	mlp:add(nn.Tanh())
 	mlp:add(nn.Linear(100, 50))

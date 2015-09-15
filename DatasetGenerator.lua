@@ -4,7 +4,7 @@ require 'audio'
 mtbv = require "midiToBinaryVector"
 require 'image'
 require 'lfs'
-
+signal = require 'signal'
 
 
 function firstToUpper(str)
@@ -73,10 +73,11 @@ function GatherAudioData(BaseDir,Container)
                 fileCounter = fileCounter + 1
                 data = audio.load(FullFilePath)
                 if type(data) == "userdata" and data:size()[1] == 1 then
-                    data = image.scale(audio.spectrogram(data, 8092,'hann',4096),1000,128)
+                    data = signal.stft(data[1], 8092,4096)--image.scale(,1000,128)
                 end
                 obj.Songs[fileCounter] = data
             end
+            collectgarbage()
 
         end
         SongGroupContainer[directoryName] = obj
@@ -203,6 +204,13 @@ end
 
 
 function GetTrainAndTestData(arg)
+    if paths.filep('./test.t7') and paths.filep('./train.t7') and paths.filep('validation.t7') and paths.filep('./classes.t7') then
+        testData = torch.load('./test.t7')
+        trainData = torch.load('./train.t7')
+        validationData = torch.load('./validation.t7')
+        classes = torch.load('classes.t7')
+        return trainData, testData, validationData, classes
+    end
     if arg == nil or arg.BaseDir == nil then
         return nil
     end    

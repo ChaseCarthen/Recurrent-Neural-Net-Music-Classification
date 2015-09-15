@@ -33,9 +33,10 @@ function SOM:forward(input)
          do
          --print("WEIGHTS" .. i)
          --print(self.weights[i]:size())
-         --print (input:size())
+         --print (inp[1]:size())
+         --print(self.weights[i][j]:size())
          --print(i)
-  	 local distance = self.weights[i][j]:dist(inp)
+  	 local distance = self.weights[i][j]:dist(inp) -- (torch.pow(self.weights[i][j],2) - torch.pow(inp[1],2)):sum()
       distance = distance * distance
          --print(distance)
  	 if distance < min then

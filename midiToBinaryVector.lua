@@ -97,7 +97,7 @@
            local note = ma.min(ma.max(n[5],0),128)
            local intensity = n[6]
            for i=fr,to do
-            
+
             ok,err = pcall(setIntensity,binVector, note, i, intensity)
             if( not ok)
               then
@@ -106,7 +106,7 @@
               print(ok)
               return nil
             else
-              break 
+              --break 
             end
           end
         end
