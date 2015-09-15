@@ -73,9 +73,14 @@ function GatherAudioData(BaseDir,Container)
                 fileCounter = fileCounter + 1
                 data = audio.load(FullFilePath)
                 if type(data) == "userdata" and data:size()[1] == 1 then
-                    data = image.scale(audio.stft(data, 8092,'hann',4096)),2,100)
+                    data = image.scale(audio.stft(data, 8092,'hann',4096),2,100)
                 end
+                if data:size(1) == 160 then
                 obj.Songs[fileCounter] = data
+                else
+                    fileCounter = fileCounter - 1
+                    print("NOT USING")
+                end
             end
             collectgarbage()
 

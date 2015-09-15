@@ -29,7 +29,7 @@ trainData = {}
 testData = {}
 classes = {}
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
-trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./genres",Ratio=.8,Ratio2=.1}
+trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./music",Ratio=.8,Ratio2=.1}
 
 
 
@@ -167,7 +167,7 @@ function train()
             end
             
             --if 1 == 1 then
-            if true or (math.fmod(SkipCounter[modelIndex],SkipSize) == 0 or trainData.Labels[shuffle[t]] == modelIndex) then
+            if (math.fmod(SkipCounter[modelIndex],SkipSize) == 0 or trainData.Labels[shuffle[t]] == modelIndex) then
                local inputs = {}
                table.insert(inputs, trainData.Songs[shuffle[t]])
 

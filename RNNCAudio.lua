@@ -167,7 +167,7 @@ function train()
             end
             
             --if 1 == 1 then
-            if true or (math.fmod(SkipCounter[modelIndex],SkipSize) == 0 or trainData.Labels[shuffle[t]] == modelIndex) then
+            if (math.fmod(SkipCounter[modelIndex],SkipSize) == 0 or trainData.Labels[shuffle[t]] == modelIndex) then
                local inputs = {}
                table.insert(inputs, trainData.Songs[shuffle[t]])
 
@@ -303,7 +303,7 @@ function test()
 end
 --test()
 
-for i = 1, 10 do
+for i = 1, 100 do
     print("Epoch: ", i)
     train()
     if math.fmod(i,2) == 0 then
