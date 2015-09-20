@@ -1,5 +1,6 @@
 local torch = require 'torch'
 local midi = require 'MIDI'
+require 'audio'
 mtbv = require "midiToBinaryVector"
 require 'lfs'
 
@@ -60,7 +61,11 @@ function GatherMidiData(BaseDir)
                         --print(data)
                         --print(data:size())
                     end
+                elseif string.find(filename, ".au")
+                then
+                    data = audio.load(FullFilePath)
                 end
+
             end
             SongGroupContainer[directoryName] = obj
             --SerializeData(directoryPath..outputFileName, obj)

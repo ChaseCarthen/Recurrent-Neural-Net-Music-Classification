@@ -1,13 +1,13 @@
 local torch = require 'torch'
-require "nn"
+require "rnn"
 local midi = require 'MIDI'
 require "optim"
 require "midiToBinaryVector"
 require 'DatasetGenerator'
 require 'lfs'
-require 'nnx'
+--require 'nnx'
 require 'writeMidi'
-
+require 'cunn'
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 trainData, testData, classes = GetTrainAndTestData("./miniMusic", .8)
@@ -31,7 +31,7 @@ mlp=nn.Sequential()
 --mlp:add(nn.Tanh())
 --mlp:add(nn.TemporalMaxPooling(2))
 
-mlp:add(nn.Linear(128,32))
+mlp:add(nn.Linear(128,128))
 --mlp:add(nn.Dropout(.2))
 --mlp:add(nn.Tanh())
 --mlp:add(nn.Linear(64,32))
@@ -46,28 +46,42 @@ mlp:add(nn.Tanh())
 
 inpMod = nn.Linear(16,16)
 rhobatch = 50
-rho = 500
+rho = 50
 r2 = nn.Recurrent(
-   32, mlp, 
-   nn.Linear(32, 32), nn.ReLU(), 
+   128, mlp, 
+   nn.Linear(128, 128), nn.Sigmoid(), 
    rho
 )
-r = nn.LSTM(128,2,rho)
-r2 = nn.LSTM(128,64,rho)
+r = nn.LSTM(128,128)
+
+Cudaify = function (mlp)
+  mlp:cuda()
+  local model = nn.Sequential()
+  --model:add(nn.Reshape(128))
+  model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
+  model:add(mlp)
+  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
+  --model:cuda()
+  return model
+end
+
+
 model = nn.Sequential()
+model:add(nn.Sequencer(r))
+model:add(nn.Sequencer(nn.Sigmoid()))
 --model:add(mlp)
-model:add(r)
+--model:add(r)
 --model:add(nn.Tanh())
 --model:add(r2)
-model:add(nn.ReLU())
+--model:add(nn.ReLU())
 
 --model:add(nn.Reshape(1,40))
-model:add(nn.Linear(2 ,128))
+--model:add(nn.Linear(2 ,128))
 --model:add(nn.Sum())
-model:add(nn.Tanh())
+--model:add(nn.Tanh())
 --model:add(nn.LogSoftMax())
-model:add(nn.MulConstant(127))
---smodel:add(nn.Abs())
+--model:add(nn.MulConstant(127))
+--model:add(nn.Abs())
 --ab = torch.randn(100,128)
 
 --print(model:forward(ab))
@@ -76,7 +90,9 @@ model:add(nn.MulConstant(127))
 --criterion = nn.MultiMarginCriterion()
 --criterion = nn.ClassNLLCriterion()
 --criterion = nn.AbsCriterion()
-criterion = nn.MSECriterion()
+--criterion = nn.MSECriterion()
+--model = Cudaify(model)
+ criterion = nn.SequencerCriterion(nn.BCECriterion())
 --criterion = nn.DistKLDivCriterion()
 -- classes
 --classes = {'Classical','Jazz'}
@@ -167,13 +183,15 @@ function train()
                        --print("Evaluating mini-batch")
                        -- evaluate function for complete mini batch
                        for i = 1,#inputs do
+                          local testcounter = 0 
                           local is = inputs[i]:split(rhobatch)
-                          for j=1,#is
+                          for j=1,#is,rhobatch
                           do
                           if(is[j]:size(1) ~= rhobatch)
                           then
                           break
                           end
+                          testcounter = testcounter + 1
                           spl_counter  = spl_counter+1
                           counter = counter+1
                           --print(is[j])
@@ -181,39 +199,58 @@ function train()
                           --print(splitted[j])
                           --print(inputs[i])
                           --local output = model:forward(inputs[i])
-                          local output = model:forward(is[j])
+                          local tr = is[j]:split(1)
+                          --for k=1,rhobatch do
+                          --  table.insert(tr,is[j][k])
+                          --end
+                          --print(tr)
+                          local output = model:forward(tr)
+                          --print(output)
                           --print("Calculating error")
                           --print(output:size())
                           --print(targets[i])
                           --local err = criterion:forward(output, inputs[i])
-                          local err = criterion:forward(output, is[j])
+                          --print(output[1]:size())
+                          --print(tr[1]:size())
+                          local err = criterion:forward(output, tr)
                           f = f + err
 
                           
                           -- estimate df/dW
                           --local df_do = criterion:backward(output, inputs[i])
                           --model:backward(inputs[i], df_do)
-                          local df_do = criterion:backward(output, is[j])
-                          model:backward(is[j], df_do)
-                          songs[j] = (output)
-                          if( (counter % rho-1) ==0)
-                          then
-                          r:updateParameters(optimState.learningRate)
-                          --r2:updateParameters(optimState.learningRate)
-                           end 
+                          local df_do = criterion:backward(output, tr)
+                          model:backward(tr, df_do)
+                          local combine = nn.JoinTable(1)
+                          songs[testcounter] = (combine:forward(output))
+                          --print("HERE")
+--print(output)
                           end
                           --r:updateParameters(optimState.learningRate)
-                          r:forget()
+                          --r:forget()
                           --r2:forget()
+                          --print(songs)
                           local combine = nn.JoinTable(1)
                           combine = combine:forward(songs)
                           
-                          combine = combine:int()
+                          combine = combine:round()
                           --print (combine)
                           if epoch % 100 == 0 and i % 10 == 0
                           then
-                          writeMidi(epoch .. "song" .. i .. ".mid",combine, 10,10)
-                          writeMidi(epoch .. "song" .. i .. "orig.mid",inputs[i],10,10)
+                          --print(combine)
+                          local val = combine:clone()
+                          --val = val:float()
+                          --print(val:size())
+                                  --val = val:round()
+                                  --print(val)
+                                  val =  val * 127
+                      --local ma = val:max()
+                      -- local mi = val:min()
+                       --val = (val - mi) / (ma - mi) * 10
+                       --print(i)
+                       print("Writing " .. epoch .. "song" .. t .. ".mid")
+                       writeMidi(epoch .. "song" .. t .. ".mid",val, 50,10)
+                          --writeMidi(epoch .. "song" .. t .. "orig.mid",inputs[i]*127,50,10)
                         end
                           -- update confusion
                         --if (j % 3) then
@@ -234,7 +271,7 @@ function train()
                    --config = {learningRate = 0.003, weightDecay = 0.01, 
       ---momentum = 0.01, learningRateDecay = 5e-7}
         --print("Before optim.sgd")
-        _,fs2 = optim.sgd(feval, parameters, optimState)
+        _,fs2 = optim.rmsprop(feval, parameters, optimState)
         --print(fs2)
         loss = loss + fs2[1]
         --print("After optim.sgd")

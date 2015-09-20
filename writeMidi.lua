@@ -40,6 +40,7 @@
   note_on = true
   --print("on")
   end
+  --print(pianoRoll[from][j])
   if ((i == pianoRoll:size(1)) and note_on) or (note_on and pianoRoll[i][j] <= 0)
   then
   --print("off")
