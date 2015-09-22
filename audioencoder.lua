@@ -8,7 +8,8 @@ require 'writeMidi'
 
 function tensorToNumber(tensor)
 	local number = 0
-	for i=1,16 do
+	--print(tensor)
+	for i=1,32 do
 		if(tensor[i] == 1) then
 			number = bit.bor(bit.lshift(1,i-1),number)
 		end
@@ -17,8 +18,8 @@ function tensorToNumber(tensor)
 end
 
 function numberToTensor(number)
-	local tensor = torch.ones(16)
-	for i=1,16 do
+	local tensor = torch.ones(32)
+	for i=1,32 do
 		tensor[i] = bit.rshift( bit.band( bit.lshift(1,i-1), number ), i-1 )
 	end
 	return tensor
@@ -32,7 +33,7 @@ cmd:option('--learningRate', 0.01, 'learning rate at t=0')
 local opt = cmd:parse(arg or {})
 
 
-trainData, testData, classes = GetTrainAndTestData("./miniMusic", .8)
+trainData, testData, classes = GetTrainAndTestData("./audio", .8)
 
 
 mlp=nn.Sequential()
@@ -46,7 +47,7 @@ r2 = nn.Recurrent(
    nn.Linear(128, 128), nn.Sigmoid(), 
    rho
 )
-r = nn.LSTM(128,128)
+r = nn.FastLSTM(1,32)
 
 Cudaify = function (mlp)
   mlp:cuda()
@@ -62,7 +63,7 @@ model = nn.Sequential()
 model:add(nn.Sequencer(r))
 model:add(nn.Sequencer(nn.Sigmoid()))
 
-
+--model = Cudaify(model)
 
  criterion = nn.SequencerCriterion(nn.BCECriterion())
 
@@ -141,45 +142,67 @@ function train()
                        for i = 1,#inputs do
                           local testcounter = 0 
                           local is = inputs[i]:split(rhobatch)
-                          for j=1,#is,rhobatch
+                          for j=1,#is
                           do
-                          if(is[j]:size(1) ~= rhobatch)
-                          then
-                          break
-                          end
-                          testcounter = testcounter + 1
+                           xlua.progress(j, #is)  
+                          --print(j)
+                          --print(inputs[i]:size())
+                          --if(is[j]:size(1) ~= rhobatch)
+                          --then
+                          --break
+                          --end
+                          --testcounter = testcounter + 1
                           spl_counter  = spl_counter+1
                           counter = counter+1
 
+                          
+
                           local tr = is[j]:split(1)
-
+                          local tr2 = is[j]:split(1)
+                          for tri=1,#tr do
+                          	--print(tr2[i])
+                          	tr2[tri] = numberToTensor(tr2[tri][1])
+                          end
                           local output = model:forward(tr)
-
-                          local err = criterion:forward(output, tr)
+                          --print(output)
+                          --print(tr2)
+                          local err = criterion:forward(output, tr2)
                           f = f + err
 
                           
                           -- estimate df/dW
-                          local df_do = criterion:backward(output, tr)
+                          local df_do = criterion:backward(output, tr2)
                           model:backward(tr, df_do)
-                          local combine = nn.JoinTable(1)
-                          songs[testcounter] = (combine:forward(output))
-
+                          --print(testcounter .. " " .. inputs[i]:size(1))
+                          for jt=1,#output do
+                          	--print(jt)
+                          	testcounter = testcounter + 1
+                          	songs[testcounter] = torch.Tensor({tensorToNumber(output[jt])})
+                          	--print(songs[testcounter])
+                      	  end
+                          --print(songs[testcounter])
                           end
 
+
+                          --print (combine:size())
+                          if epoch % 20 == 0 and i % 1 == 0
+                          then
                           local combine = nn.JoinTable(1)
+
+                          ---print(#songs)
                           combine = combine:forward(songs)
                           
-                          combine = combine:round()
-                          --print (combine)
-                          if epoch % 100 == 0 and i % 10 == 0
-                          then
+                          --combine = combine:round()
 
-                          local val = combine:clone()
-                                  val =  val * 127
-
-                       print("Writing " .. epoch .. "song" .. t .. ".mid")
-                       writeMidi(epoch .. "song" .. t .. ".mid",val, 50,10)
+                          --local val = torch.ones(combine:size(1),1)
+                                  --val =  val * 127
+                       --for items=1,combine:size(1) do
+                       	--print(combine[items])
+                       	--val[items] = tensorToNumber(combine[items])
+                       --end
+                       --print(combine:size())
+                       print("Writing " .. epoch .. "song" .. i .. ".mid")
+                       audio.save(epoch .. "song" .. i .. ".au",torch.reshape(combine,combine:size(1),1), 44100/2)
 
                         end
 

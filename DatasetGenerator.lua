@@ -3,7 +3,7 @@ local midi = require 'MIDI'
 require 'audio'
 mtbv = require "midiToBinaryVector"
 require 'lfs'
-
+require 'cunn'
 
 
 function firstToUpper(str)
@@ -56,14 +56,18 @@ function GatherMidiData(BaseDir)
                     data = midiToBinaryVec(FullFilePath) 
                     if data ~= nil then
                         fileCounter = fileCounter + 1 
-                        obj.Songs[fileCounter] = data
+                        obj.Songs[fileCounter] = data:transpose(1,2):clone():cuda()
                        --print("DATA: ")
                         --print(data)
                         --print(data:size())
                     end
                 elseif string.find(filename, ".au")
                 then
-                    data = audio.load(FullFilePath)
+
+                    data = audio.load(FullFilePath):t()[1]
+                    fileCounter = fileCounter + 1
+                    obj.Songs[fileCounter] = data
+                    print("HERE")
                 end
 
             end
@@ -96,13 +100,13 @@ function SplitMidiData(data, ratio)
           --print(#data[genreKey].Songs)
           --print(i)
           --print(genreKey)
-          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
+          trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
           trainData.Labels[TrainingCounter] = classifier[genreKey]
         end
         
         for i=numTrain+1,numTrain+numTest do
             TestingCounter = TestingCounter + 1
-            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]:transpose(1,2):clone()
+            testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
             testData.Labels[TestingCounter] = classifier[genreKey]
 
         end

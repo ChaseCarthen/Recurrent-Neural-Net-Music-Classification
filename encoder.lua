@@ -8,7 +8,9 @@ require 'lfs'
 --require 'nnx'
 require 'writeMidi'
 require 'cunn'
+require 'cutorch'
 
+cutorch.setDevice(1)
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 trainData, testData, classes = GetTrainAndTestData("./miniMusic", .8)
 
@@ -58,11 +60,11 @@ Cudaify = function (mlp)
   mlp:cuda()
   local model = nn.Sequential()
   --model:add(nn.Reshape(128))
-  model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
-  model:add(mlp)
-  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
+  --model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
+  --model:add(mlp)
+  --model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
   --model:cuda()
-  return model
+  return mlp
 end
 
 
@@ -91,8 +93,9 @@ model:add(nn.Sequencer(nn.Sigmoid()))
 --criterion = nn.ClassNLLCriterion()
 --criterion = nn.AbsCriterion()
 --criterion = nn.MSECriterion()
---model = Cudaify(model)
+model = Cudaify(model)
  criterion = nn.SequencerCriterion(nn.BCECriterion())
+ criterion:cuda()
 --criterion = nn.DistKLDivCriterion()
 -- classes
 --classes = {'Classical','Jazz'}
@@ -185,12 +188,12 @@ function train()
                        for i = 1,#inputs do
                           local testcounter = 0 
                           local is = inputs[i]:split(rhobatch)
-                          for j=1,#is,rhobatch
+                          for j=1,#is--,rhobatch
                           do
-                          if(is[j]:size(1) ~= rhobatch)
-                          then
-                          break
-                          end
+                          --if(is[j]:size(1) ~= rhobatch)
+                          --then
+                          --break
+                          --end
                           testcounter = testcounter + 1
                           spl_counter  = spl_counter+1
                           counter = counter+1
@@ -199,6 +202,7 @@ function train()
                           --print(splitted[j])
                           --print(inputs[i])
                           --local output = model:forward(inputs[i])
+
                           local tr = is[j]:split(1)
                           --for k=1,rhobatch do
                           --  table.insert(tr,is[j][k])
@@ -219,10 +223,13 @@ function train()
                           -- estimate df/dW
                           --local df_do = criterion:backward(output, inputs[i])
                           --model:backward(inputs[i], df_do)
+                          --print(tr)
                           local df_do = criterion:backward(output, tr)
                           model:backward(tr, df_do)
+                          if epoch % 20 == 0 and i % 10 == 0 then
                           local combine = nn.JoinTable(1)
                           songs[testcounter] = (combine:forward(output))
+                          end
                           --print("HERE")
 --print(output)
                           end
@@ -230,13 +237,14 @@ function train()
                           --r:forget()
                           --r2:forget()
                           --print(songs)
+
+                          --print (combine)
+                          if epoch % 20 == 0 and i % 10 == 0
+                          then
                           local combine = nn.JoinTable(1)
                           combine = combine:forward(songs)
                           
                           combine = combine:round()
-                          --print (combine)
-                          if epoch % 100 == 0 and i % 10 == 0
-                          then
                           --print(combine)
                           local val = combine:clone()
                           --val = val:float()
