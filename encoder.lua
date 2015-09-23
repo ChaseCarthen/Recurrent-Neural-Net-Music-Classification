@@ -47,7 +47,7 @@ mlp:add(nn.Tanh())
 --r = mlp
 
 inpMod = nn.Linear(16,16)
-rhobatch = 50
+rhobatch = 100
 rho = 50
 r2 = nn.Recurrent(
    128, mlp, 
@@ -188,12 +188,14 @@ function train()
                        for i = 1,#inputs do
                           local testcounter = 0 
                           local is = inputs[i]:split(rhobatch)
+                          --print(is)
                           for j=1,#is--,rhobatch
                           do
-                          --if(is[j]:size(1) ~= rhobatch)
-                          --then
-                          --break
-                          --end
+                          if(is[j]:size(1) ~= rhobatch)
+                          then
+                          is[j] = nil
+                          end
+                          end
                           testcounter = testcounter + 1
                           spl_counter  = spl_counter+1
                           counter = counter+1
@@ -203,12 +205,12 @@ function train()
                           --print(inputs[i])
                           --local output = model:forward(inputs[i])
 
-                          local tr = is[j]:split(1)
+                          --local tr = is[j]:split(1)
                           --for k=1,rhobatch do
                           --  table.insert(tr,is[j][k])
                           --end
                           --print(tr)
-                          local output = model:forward(tr)
+                          local output = model:forward(is)
                           --print(output)
                           --print("Calculating error")
                           --print(output:size())
@@ -216,7 +218,7 @@ function train()
                           --local err = criterion:forward(output, inputs[i])
                           --print(output[1]:size())
                           --print(tr[1]:size())
-                          local err = criterion:forward(output, tr)
+                          local err = criterion:forward(output, is)
                           f = f + err
 
                           
@@ -224,15 +226,15 @@ function train()
                           --local df_do = criterion:backward(output, inputs[i])
                           --model:backward(inputs[i], df_do)
                           --print(tr)
-                          local df_do = criterion:backward(output, tr)
-                          model:backward(tr, df_do)
+                          local df_do = criterion:backward(output, is)
+                          model:backward(is, df_do)
                           if epoch % 20 == 0 and i % 10 == 0 then
                           local combine = nn.JoinTable(1)
                           songs[testcounter] = (combine:forward(output))
                           end
                           --print("HERE")
 --print(output)
-                          end
+                          --end
                           --r:updateParameters(optimState.learningRate)
                           --r:forget()
                           --r2:forget()
@@ -304,10 +306,12 @@ function train()
    end
 
    -- save/log current net
+   if(epoch % 20 == 0) then
    local filename = paths.concat('.', 'model.net')
    os.execute('mkdir -p ' .. sys.dirname(filename))
    print('==> saving model to '..filename)
    torch.save(filename, model)
+   end
 
    -- next epoch
    confusion:zero()

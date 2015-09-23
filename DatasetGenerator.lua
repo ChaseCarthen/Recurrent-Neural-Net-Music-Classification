@@ -64,8 +64,10 @@ function GatherMidiData(BaseDir)
                 elseif string.find(filename, ".au")
                 then
 
-                    data = audio.load(FullFilePath):t()[1]
+                    data = audio.load(FullFilePath):t()[1]:float():cuda()
                     fileCounter = fileCounter + 1
+                    --print(data:size())
+                    --print(torch.ones(10):cuda())
                     obj.Songs[fileCounter] = data
                     print("HERE")
                 end

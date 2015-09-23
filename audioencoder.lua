@@ -6,6 +6,11 @@ require 'cunn'
 require 'writeMidi'
 --version = 9
 
+require 'cunn'
+require 'cutorch'
+
+cutorch.setDevice(1)
+
 function tensorToNumber(tensor)
 	local number = 0
 	--print(tensor)
@@ -37,14 +42,14 @@ trainData, testData, classes = GetTrainAndTestData("./audio", .8)
 
 
 mlp=nn.Sequential()
-mlp:add(nn.Linear(128,128))
+mlp:add(nn.Linear(1,32))
 mlp:add(nn.Tanh())
 
 rhobatch = 50
 rho = 50
 r2 = nn.Recurrent(
-   128, mlp, 
-   nn.Linear(128, 128), nn.Sigmoid(), 
+   32, mlp, 
+   nn.Linear(32, 32), nn.Sigmoid(), 
    rho
 )
 r = nn.FastLSTM(1,32)
@@ -52,21 +57,21 @@ r = nn.FastLSTM(1,32)
 Cudaify = function (mlp)
   mlp:cuda()
   local model = nn.Sequential()
-  model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
-  model:add(mlp)
-  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
-  return model
+  --model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
+  --model:add(mlp)
+  --model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
+  return mlp
 end
 
 
 model = nn.Sequential()
-model:add(nn.Sequencer(r))
+model:add(nn.Sequencer(r2))
 model:add(nn.Sequencer(nn.Sigmoid()))
 
---model = Cudaify(model)
+model = Cudaify(model)
 
  criterion = nn.SequencerCriterion(nn.BCECriterion())
-
+criterion = criterion:cuda()
 
 -- This matrix records the current confusion across classes
 confusion = optim.ConfusionMatrix(classes)
@@ -161,11 +166,11 @@ function train()
                           local tr2 = is[j]:split(1)
                           for tri=1,#tr do
                           	--print(tr2[i])
-                          	tr2[tri] = numberToTensor(tr2[tri][1])
+                          	tr2[tri] = numberToTensor(tr2[tri][1]):cuda()
                           end
                           local output = model:forward(tr)
-                          --print(output)
-                          --print(tr2)
+
+
                           local err = criterion:forward(output, tr2)
                           f = f + err
 
