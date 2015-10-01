@@ -16,6 +16,25 @@ classifier = {}
 classes = {}
 
 
+function applyToTensor(tensor)
+    --print(tensor)
+    local temp = torch.ones(tensor:size(1),32) 
+    for i=1,tensor:size(1) do
+        --print(tensor[i])
+        temp[i] = numberToTensor(tensor[i])
+    end
+    return temp
+end
+
+
+function numberToTensor(number)
+    local tensor = torch.ones(32)
+    for i=1,32 do
+        tensor[i] = bit.rshift( bit.band( bit.lshift(1,i-1), number ), i-1 )
+    end
+    return tensor
+end
+
 
 
 --Gather the midi files from the music directory. The SongGroupContainer is neccessary since we want to split
@@ -64,7 +83,7 @@ function GatherMidiData(BaseDir)
                 elseif string.find(filename, ".au")
                 then
 
-                    data = audio.load(FullFilePath):t()[1]:float():cuda()
+                    data = audio.load(FullFilePath):float():cuda()--:t()[1]:float()):cuda()
                     fileCounter = fileCounter + 1
                     --print(data:size())
                     --print(torch.ones(10):cuda())

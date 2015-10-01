@@ -42,8 +42,8 @@ trainData, testData, classes = GetTrainAndTestData("./audio", .8)
 
 
 mlp=nn.Sequential()
-mlp:add(nn.Linear(32,32))
-mlp:add(nn.Tanh())
+mlp:add(nn.Linear(1,32))
+--mlp:add(nn.Tanh())
 
 rhobatch = 100
 rho = 50
@@ -52,7 +52,7 @@ r2 = nn.Recurrent(
    nn.Linear(32, 32), nn.Sigmoid(), 
    rho
 )
-r = nn.FastLSTM(32,32)
+r = nn.FastLSTM(1,1)
 
 Cudaify = function (mlp)
   mlp:cuda()
@@ -66,11 +66,12 @@ end
 
 model = nn.Sequential()
 model:add(nn.Sequencer(r2))
+model:add(nn.Sequencer(nn.Linear(32,1)))
 --model:add(nn.Sequencer(nn.Sigmoid()))
 
 model = Cudaify(model)
 
- criterion = nn.SequencerCriterion(nn.BCECriterion())
+ criterion = nn.SequencerCriterion(nn.MSECriterion())
 criterion = criterion:cuda()
 
 -- This matrix records the current confusion across classes
@@ -191,7 +192,7 @@ function train()
                           		for js=1,output[jt]:size(1) do
                           		--print(jt)
                           		testcounter = testcounter + 1
-                          		songs[testcounter] = torch.Tensor({tensorToNumber(output[jt][js])})
+                          		songs[testcounter] = output[jt][js]
                           		end
                           		--print(songs[testcounter])
                       	  	end
@@ -217,8 +218,8 @@ function train()
                        	--val[items] = tensorToNumber(combine[items])
                        --end
                        --print(combine:size())
-                       print("Writing " .. epoch .. "song" .. i .. ".mid")
-                       audio.save(epoch .. "song" .. i .. ".au",torch.reshape(combine,combine:size(1),1), 44100/2)
+                       print("Writing " .. epoch .. "regsong" .. i .. ".au")
+                       audio.save(epoch .. "regsong" .. i .. ".au",torch.reshape(combine,combine:size(1),1), 44100/2)
 
                         end
 

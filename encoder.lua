@@ -189,12 +189,17 @@ function train()
                           local testcounter = 0 
                           local is = inputs[i]:split(rhobatch)
                           --print(is)
+                          local iss = {}
                           for j=1,#is--,rhobatch
                           do
                           if(is[j]:size(1) ~= rhobatch)
                           then
                           is[j] = nil
+                          else 
+                          iss[j] = is[j]:sub(2,is[j]:size(1)):float()
+                          iss[j] = torch.cat(iss[j],torch.zeros(1,128),1):cuda()
                           end
+
                           end
                           testcounter = testcounter + 1
                           spl_counter  = spl_counter+1
@@ -226,8 +231,8 @@ function train()
                           --local df_do = criterion:backward(output, inputs[i])
                           --model:backward(inputs[i], df_do)
                           --print(tr)
-                          local df_do = criterion:backward(output, is)
-                          model:backward(is, df_do)
+                          local df_do = criterion:backward(output, iss)
+                          model:backward(iss, df_do)
                           if epoch % 20 == 0 and i % 10 == 0 then
                           local combine = nn.JoinTable(1)
                           songs[testcounter] = (combine:forward(output))
