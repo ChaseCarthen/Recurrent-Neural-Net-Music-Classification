@@ -83,7 +83,7 @@ function GatherMidiData(BaseDir)
                 elseif string.find(filename, ".au")
                 then
 
-                    data = audio.load(FullFilePath):float():cuda()--:t()[1]:float()):cuda()
+                    data = applyToTensor(audio.load(FullFilePath):t()[1]:float())--:t()[1]:float()):cuda()
                     fileCounter = fileCounter + 1
                     --print(data:size())
                     --print(torch.ones(10):cuda())

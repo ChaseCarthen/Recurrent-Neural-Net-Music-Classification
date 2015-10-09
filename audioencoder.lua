@@ -57,10 +57,10 @@ r = nn.FastLSTM(32,32)
 Cudaify = function (mlp)
   mlp:cuda()
   local model = nn.Sequential()
-  --model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
-  --model:add(mlp)
-  --model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
-  return mlp
+  model:add(nn.Sequencer(nn.Copy('torch.FloatTensor', 'torch.CudaTensor')))
+  model:add(mlp)
+  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
+  return model
 end
 
 
@@ -71,7 +71,7 @@ model:add(nn.Sequencer(r2))
 model = Cudaify(model)
 
  criterion = nn.SequencerCriterion(nn.BCECriterion())
-criterion = criterion:cuda()
+--criterion = criterion:cuda()
 
 -- This matrix records the current confusion across classes
 confusion = optim.ConfusionMatrix(classes)
