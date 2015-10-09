@@ -1,103 +1,102 @@
 local torch = require 'torch'
-local nn = require "nn"
-local midi = require 'MIDI'
+nn = require "nn"
+require "nn"
 require "optim"
-require "midiToBinaryVector"
 require 'DatasetGenerator'
 require 'lfs'
+local math = require 'math'
+
+require 'cunn'
+
+----------------------------------GATHER DATA----------------------------------
+--Get Data
+--trainData, testData, classes = GetTrainAndTestData("./music", .5)
+trainData, testData, validationData, classes = GetTrainAndTestData{BaseDir="./music", Ratio=.5,Ratio2=.2}
+
+print (testData)
+--Add a Results parameter to trainData and testData
+trainData.Results = {}
+testData.Results = {}
+validationData.Results = {}
 
 
 
 
---Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
-trainData, testData, classes = GetTrainAndTestData("./music", .8)
+---------------------------------GATHER MODELS---------------------------------
+Models = {}
+
+--Get Single Neural Network Data
+local filename = paths.concat('.', 'SNNModel.net')
+SingleModels = torch.load(filename)
+for i=1, #classes do
+	table.insert(Models, SingleModels[i])
+end
 
 
---Step 2: Create the model
-inp = 128;  -- dimensionality of one sequence element 
-outp = 32; -- number of derived features for one sequence element
-kw = 4;   -- kernel only operates on one sequence element at once
-dw = 4;   -- we step once and go on to the next sequence element
-spl = 64 -- split constant
---print(nn)
-mlp=nn.Sequential()
-mlp:add(nn.TemporalConvolution(inp,128,kw,dw))
---mlp:add(nn.Reshape(inp))
-mlp:add(nn.Tanh())
-mlp:add(nn.TemporalMaxPooling(4))
+--Add Next Model
+--local filename = paths.concat('.', 'NextModel.net')
+--NextModel = torch.load(filename)
+--table.insert(Models, NextModel)
 
-mlp:add(nn.TemporalConvolution(inp,128,4,4))
---mlp:add(nn.Reshape(inp))
-mlp:add(nn.Tanh())
-mlp:add(nn.TemporalMaxPooling(2))
 
-mlp:add(nn.Linear(128,64))
---mlp:add(nn.Dropout(.2))
-mlp:add(nn.Tanh())
-mlp:add(nn.Linear(64,128))
-mlp:add(nn.Dropout())
---mlp:add(nn.Square())
-mlp:add(nn.Sum())
-mlp:add(nn.ReLU())
-mlp:add(nn.Linear(128,#classes))
-mlp:add(nn.Tanh())
+print("Number of Models: ", #Models)
+print("Finished Gathering Models")
 
-model = mlp
 
---- Richards model
+---------------------------------Concatinate All Outputs of Models---------------------------------
+for songIndex=1, trainData:size() do
+	classOutput = Models[1]:forward(trainData.Songs[songIndex])
+	trainData.Results[songIndex] = classOutput
+	--print("Result Size", #trainData.Results[songIndex])
+
+	for i=2, #Models do
+		classOutput = Models[i]:forward(trainData.Songs[songIndex])
+		--print("classOutput Result Size", #classOutput)
+		trainData.Results[songIndex] = torch.cat(trainData.Results[songIndex], classOutput)
+		--print("Result Size1", #trainData.Results[songIndex])
+	end
+end
+
+--print("Output size", #trainData.Results[2])
+OutputSize = trainData.Results[1]:size(1)
+
+
+
+for songIndex=1, testData:size() do
+
+	classOutput = Models[1]:forward(testData.Songs[songIndex])
+	testData.Results[songIndex] = classOutput
+	for i=2, #Models do
+		classOutput = Models[i]:forward(testData.Songs[songIndex])
+		testData.Results[songIndex] = torch.cat(testData.Results[songIndex], classOutput)	
+	end
+end
+
+for songIndex=1, validationData:size() do
+
+  classOutput = Models[1]:forward(validationData.Songs[songIndex])
+  validationData.Results[songIndex] = classOutput
+  for i=2, #Models do
+    classOutput = Models[i]:forward(validationData.Songs[songIndex])
+    validationData.Results[songIndex] = torch.cat(validationData.Results[songIndex], classOutput) 
+  end
+end
+
+print("Finished Gathering Data")
+------------------------------END OF GATHER DATA---------------------------------
+
+
 model = nn.Sequential()
---model:add(nn.Reshape(1,128,512))
-model:add(nn.SpatialContrastiveNormalization(2,image.gaussian1D(5)))
-model:add(nn.SpatialConvolution(2, 6, 5, 5))
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-model:add(nn.SpatialConvolution(6, 16, 5,5))
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-model:add(nn.View(16 * 125 * 29))
-model:add(nn.Linear(16 * 125 * 29, 256))
-model:add(nn.PReLU())
+model:add(nn.Linear(OutputSize, 2500))
 model:add(nn.Dropout(0.2))
-model:add(nn.Linear(256, #classes))
-model:add(nn.PReLU())
+model:add(nn.Tanh())
+model:add(nn.Linear(2500,#classes))
 model:add(nn.LogSoftMax())
 
--- Richards Model 2
-model = nn.Sequential()
-model:add(nn.SpatialContrastiveNormalization(2,image.gaussian1D(5)))
-model:add(nn.SpatialConvolution(2,16,5,5))
-model:add(nn.PReLU())
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-
-model:add(nn.SpatialConvolution(16,32,5,5))
-model:add(nn.PReLU())
-model:add(nn.SpatialMaxPooling(2,2,2,2))
-
-model:add(nn.View(32*125*29))
-model:add(nn.Linear(32*125*29,256))
-model:add(nn.Dropout(.5))
-model:add(nn.PReLU())
-model:add(nn.Linear(256,#classes))
-model:add(nn.Dropout(0.5))
-model:add(nn.LogSoftMax())
-
---Step 3: Defne Our Loss Function
---criterion = nn.MultiMarginCriterion()
 criterion = nn.ClassNLLCriterion()
 
--- classes
---classes = {'Classical','Jazz'}
---Obtained from GetTrainAndTestData
-
--- This matrix records the current confusion across classes
 confusion = optim.ConfusionMatrix(classes)
-print(confusion)
 
--- Log results to files
-trainLogger = optim.Logger(paths.concat('.', 'train.log'))
-testLogger = optim.Logger(paths.concat('.', 'test.log'))
-
--- Retrieve parameters and gradients:
--- this extracts and flattens all the trainable parameters of the mode
--- into a 1-dim vector
 if model then
    parameters,gradParameters = model:getParameters()
 end
@@ -106,10 +105,10 @@ end
 
 
 optimState = {
-    learningRate = 0.003,
+    learningRate = 0.001,
     weightDecay = 0.01,
-    momentum = .01,
-    learningRateDecay = 1e-7
+    momentum = 0.01,
+    learningRateDecay = 5e-7
 }
 optimMethod = optim.sgd
 --print(torch.randperm(11))
@@ -146,7 +145,7 @@ function train()
       if t+s > trainData:size() then
       break
       end
-      inputs[s] = trainData.Songs[shuffle[t+s]]
+      inputs[s] = trainData.Results[shuffle[t+s]]
       targets[s] = trainData.Labels[shuffle[t+s]]
       end  
         
@@ -220,50 +219,18 @@ function train()
    -- print confusion matrix
    print(confusion)
 
-   -- update logger/plot
-   trainLogger:add{['% mean class accuracy (train set)'] = confusion.totalValid * 100}
-   if true then
-      trainLogger:style{['% mean class accuracy (train set)'] = '-'}
-      --trainLogger:plot()
-   end
 
    -- save/log current net
-   local filename = paths.concat('.', 'model.net')
+   local filename = paths.concat('.', 'ComModel.net')
    os.execute('mkdir -p ' .. sys.dirname(filename))
    print('==> saving model to '..filename)
-   torch.save(filename, model)
+   --torch.save(filename, model)
 
    -- next epoch
    confusion:zero()
    epoch = epoch + 1
 end
 train()
-
-
-
-
-getClass = function(preds,target,confusion)
-local c = {}
-c[1] = 0
-c[2] = 0
-c[3] = 0
-for i = 1,#preds
-    do 
-        local m = preds[i][1]
-        local current = 1
-        for j=2,3
-        do
-            if(preds[i][j] > m)
-            then
-                current = j
-            end
-        end
-        c[current] = c[current] + 1
-    end
---print(c)
---print(target)
-end
-
 
 
 
@@ -282,31 +249,12 @@ function test()
    -- test over test data
    print('==> testing on test set:')
    for t = 1,testData:size() do
-      -- disp progress
-      xlua.progress(t, testData:size())
-
-      -- get new sample
-      local input = testData.Songs[t]
-      --input = input:double()
+      local input = testData.Results[t]
       local target = testData.Labels[t]
-      --local sum = torch.Tensor(3)
-      --preds = {}
-      -- test sample
-      --local splitted = input:split(spl,1)
-      ---                          for j = 1,#splitted do
-         --                 if splitted[j]:size(1) * splitted[j]:size(2) ~= 128*spl then
-           --                break
-             --           end
       local pred = model:forward(input)
       pred = torch.reshape(pred, #classes)
-      --preds[j] = pred
-      --sum = sum + pred
       confusion:add(pred, target)
-      --print (confusion)
       end
-      --getClass(preds,target,confusion)
-      --confusion:add(sum,target)
-  -- end
 
    -- timing
    time = sys.clock() - time
@@ -316,12 +264,47 @@ function test()
    -- print confusion matrix
    print(confusion)
 
-   -- update log/plot
-   testLogger:add{['% mean class accuracy (test set)'] = confusion.totalValid * 100}
-   if true then
-      testLogger:style{['% mean class accuracy (test set)'] = '-'}
-      --testLogger:plot()
+
+   -- averaged param use?
+   if average then
+      -- restore parameters
+      parameters:copy(cachedparams)
    end
+   
+   -- next iteration:
+   confusion:zero()
+end
+
+function validation()
+   -- local vars
+   local time = sys.clock()
+
+   if average then
+      cachedparams = parameters:clone()
+      parameters:copy(average)
+   end
+
+   -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
+   model:evaluate()
+  print(validationData:size())
+   -- test over test data
+   print('==> testing on validation set:')
+   for t = 1,validationData:size() do
+      local input = validationData.Results[t]
+      local target = validationData.Labels[t]
+      local pred = model:forward(input)
+      pred = torch.reshape(pred, #classes)
+      confusion:add(pred, target)
+      end
+
+   -- timing
+   time = sys.clock() - time
+   time = time / testData:size()
+   print("\n==> time to test 1 sample = " .. (time*1000) .. 'ms')
+
+   -- print confusion matrix
+   print(confusion)
+
 
    -- averaged param use?
    if average then
@@ -334,10 +317,9 @@ function test()
 end
 
 
-
-
-for i = 1, 400 do
+epochs = 100
+for i=1, epochs do
     train()
     test()
+    validation()
 end
-
