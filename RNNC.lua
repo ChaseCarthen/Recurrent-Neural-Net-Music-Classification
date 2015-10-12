@@ -40,8 +40,9 @@ print(trainData.Labels[1])
 Cudaify = function (mlp)
 	mlp:cuda()
 	local model = nn.Sequential()
-	model:add(nn.Reshape(2*500*128))
-	model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor'))
+  --model:add(nn.Copy('torch.ByteTensor', 'torch.FloatTensor'))
+	model:add(nn.View(1*500*128))
+	model:add(nn.Copy('torch.ByteTensor', 'torch.CudaTensor'))
 	model:add(mlp)
 	model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
 	return model
@@ -63,9 +64,9 @@ DefaultModel = function(num_output)
 	--16 layers, 30x125 image
         if not cuda then
         print("view")
-	mlp:add(nn.View(2*500*128))
+	mlp:add(nn.View(1*500*128))
         end
-	mlp:add(nn.Linear(2*500*128, 100))
+	mlp:add(nn.Linear(1*500*128, 100))
 	mlp:add(nn.Dropout(.1))
 	mlp:add(nn.Tanh())
 	mlp:add(nn.Linear(100, 50))
@@ -194,13 +195,15 @@ function train()
 
 			--print("Calculating output")
 			--print("Input: ", inputs[i])
+      --print(inputs[i])
                            local output = models[modelIndex]:forward(inputs[i])
 			 --print(output)
                           local err = criterion:forward(output, targets[i])
                            f = f + err        
                           current_loss = current_loss + f
                            local df_do = criterion:backward(output, targets[i])        
-                            models[modelIndex]:backward(inputs[i], df_do)                
+                            models[modelIndex]:backward(inputs[i], df_do) 
+           
                             confusions[modelIndex]:add(output, targets[i])
                            end
 
@@ -303,7 +306,7 @@ function test()
 end
 --test()
 
-for i = 1, 10 do
+for i = 1, 40 do
     print("Epoch: ", i)
     train()
     if math.fmod(i,2) == 0 then

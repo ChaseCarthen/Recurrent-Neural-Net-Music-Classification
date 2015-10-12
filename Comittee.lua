@@ -59,7 +59,7 @@ end
 
 --print("Output size", #trainData.Results[2])
 OutputSize = trainData.Results[1]:size(1)
-
+print(OutputSize)
 
 
 for songIndex=1, testData:size() do
@@ -83,6 +83,7 @@ for songIndex=1, validationData:size() do
 end
 
 print("Finished Gathering Data")
+print(OutputSize)
 ------------------------------END OF GATHER DATA---------------------------------
 
 

@@ -4,20 +4,12 @@ require 'audio'
 mtbv = require "midiToBinaryVector"
 require 'image'
 require 'lfs'
-require 'cunn'
 signal = require 'signal'
-
 
 
 function firstToUpper(str)
     return str:gsub("^%l", string.upper)
 end
-
---Create a table to associate genre names with numerical values.
-
-classifier = {}
-classes = {}
-
 
 function applyToTensor(tensor)
     --print(tensor)
@@ -37,6 +29,12 @@ function numberToTensor(number)
     end
     return tensor
 end
+
+--Create a table to associate genre names with numerical values.
+
+classifier = {}
+classes = {}
+
 
 
 
@@ -80,40 +78,30 @@ function GatherAudioData(BaseDir,Container)
     for filename in lfs.dir(BaseDir.."/"..directoryName) 
         do
         FullFilePath = BaseDir.."/"..directoryName.."/"..filename
-        if string.find(filename, "%.mid") then 
+        if string.find(filename, "%.mid") then
+            print("MUSIC") 
             data = false
             data = midiToBinaryVec(FullFilePath)
-
-            if "userdata" == type(data) and data:size(1) == 2 then
+            print(type(data))
+            if "userdata" == type(data) and data:size()[1] == 1 then
+                print("ADD")
                 fileCounter = fileCounter + 1 
                 obj.Songs[fileCounter] = data
             end
             
-            fileCounter = 0
-            for filename in lfs.dir(BaseDir.."/"..directoryName) 
-            do FullFilePath = BaseDir.."/"..directoryName.."/"..filename
-                if string.find(filename, ".mid")
-                then 
-                    
-                    data = midiToBinaryVec(FullFilePath) 
-                    if data ~= nil then
-                        fileCounter = fileCounter + 1 
-                        obj.Songs[fileCounter] = data:transpose(1,2):clone():cuda()
-                       --print("DATA: ")
-                        --print(data)
-                        --print(data:size())
-                    end
-                elseif string.find(filename, ".au")
-                then
-
-                    data = applyToTensor(audio.load(FullFilePath):t()[1]:float())--:t()[1]:float()):cuda()
-                    fileCounter = fileCounter + 1
-                    --print(data:size())
-                    --print(torch.ones(10):cuda())
-                    obj.Songs[fileCounter] = data
-                    print("HERE")
+            elseif string.find(filename, "%.au") then
+                print("Loading " .. filename)
+                fileCounter = fileCounter + 1
+                data = audio.load(FullFilePath)
+                if type(data) == "userdata" and data:size()[1] == 1 then
+                    data = applyToTensor(data):byte()
                 end
-
+                if data:size(1) == 160 then
+                obj.Songs[fileCounter] = data
+                else
+                    fileCounter = fileCounter - 1
+                    print("NOT USING")
+                end
             end
             collectgarbage()
 
@@ -129,7 +117,7 @@ SaveData =
 	classifier = classifier
 	
 }
-
+print (SongGroupContainer["country"].Songs)
 torch.save(SongData_file, SaveData)
 
 return SongGroupContainer
@@ -199,6 +187,7 @@ function SplitAudioData2(data, ratio,ratio2)
     ValidationCounter = 0
 
     for genreKey,value in pairs(data) do 
+        print(data[genreKey].Songs)
         local shuffle = torch.randperm(#data[genreKey].Songs)
         local numTrain = math.floor(shuffle:size(1) * ratio)
         local numTest = math.floor(shuffle:size(1) * ratio2)
@@ -253,6 +242,7 @@ function GetTrainAndTestData(arg)
         return nil
     end    
     Data = GatherAudioData(arg.BaseDir)
+    print(Data)
     if arg.Ratio ~= nil and arg.Ratio2 == nil then
         return SplitAudioData(Data, arg.Ratio)
     else
@@ -265,3 +255,14 @@ end
 --print(trainData)
 --print (testData)
 --print (classes)
+
+
+
+
+
+
+
+
+
+
+
