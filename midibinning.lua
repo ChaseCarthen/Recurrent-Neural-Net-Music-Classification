@@ -5,6 +5,26 @@ require 'image'
 require 'sndfile'
 file = require 'file' -- Get this guy from https://github.com/gummesson/file.lua
 
+function applyToTensor(tensor)
+    --print(tensor)
+    local temp = torch.ones(tensor:size(1),32)
+    for i=1,tensor:size(1) do
+        --print(tensor[i])
+        temp[i] = numberToTensor(tensor[i])
+    end
+    return temp
+end
+
+
+function numberToTensor(number)
+    local tensor = torch.ones(32)
+    for i=1,32 do
+        tensor[i] = bit.rshift( bit.band( bit.lshift(1,i-1), number ), i-1 )
+    end
+    return tensor
+end
+
+
 local midi = require 'MIDI'
 require "midiToBinaryVector"
 
@@ -91,8 +111,10 @@ function createTorchContainers(files)
         end
     else -- load audio
         data = audio.load(files[j])
+        print("SIZE: " .. data:size()[1])
         if type(data) == "userdata" and data:size()[1] == 1 then
-            data = image.scale(audio.stft(data, 8092,'hann',4096),512,128)
+            --data = image.scale(audio.stft(data, 8092,'hann',4096),512,128)
+            data  = applyToTensor(data)
         end
         count = count + 1
         cont.files[count] = files[j]
@@ -109,7 +131,7 @@ end
 end
 
 function createTorchContainers2(files,ratio,ratio2,split)
-
+    print ("TORCH CONTAINERS")
     for i=1,#files,split
         do
         local cont = {data={}, files={},samplerate={}}
@@ -150,9 +172,11 @@ function createTorchContainers2(files,ratio,ratio2,split)
 
         end
     else -- load audio
-        data = audio.load(files[j])
-        if type(data) == "userdata" and data:size()[1] == 1 then
-            data = image.scale(audio.stft(data, 8092,'hann',4096),2,100) -- eh scaling hurts
+        data = audio.load(files[j]):t()
+        --print (data:size())
+        if type(data) == "userdata" then
+            data = applyToTensor(data[1]):byte()--image.scale(audio.stft(data, 8092,'hann',4096),2,100) -- eh scaling hurts
+            --print(data)
         end
         if count <= numTrain then
         print("Train")
