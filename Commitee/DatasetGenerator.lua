@@ -92,13 +92,16 @@ function GatherAudioData(BaseDir,Container)
             elseif string.find(filename, "%.au") then
                 print("Loading " .. filename)
                 fileCounter = fileCounter + 1
-                data = audio.load(FullFilePath):t()
-                if type(data) == "userdata"  then
-                    print ( data:size())
-                    data = applyToTensor(data[1]):byte()
+                data = audio.load(FullFilePath)
+                if type(data) == "userdata" and data:size()[1] == 1 then
+                    data = applyToTensor(data):byte()
                 end
+                if data:size(1) == 160 then
                 obj.Songs[fileCounter] = data
-
+                else
+                    fileCounter = fileCounter - 1
+                    print("NOT USING")
+                end
             end
             collectgarbage()
 
@@ -114,7 +117,7 @@ SaveData =
 	classifier = classifier
 	
 }
-
+print (SongGroupContainer["country"].Songs)
 torch.save(SongData_file, SaveData)
 
 return SongGroupContainer

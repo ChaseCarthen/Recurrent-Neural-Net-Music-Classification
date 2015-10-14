@@ -21,6 +21,7 @@ local file = require 'file'
 local files = getFiles("./midibins",'.dat')
 print(files)
 print(#files)
+
 classes = 10
 model = SOM.create(128,512,4,4,200)
 model:cuda()

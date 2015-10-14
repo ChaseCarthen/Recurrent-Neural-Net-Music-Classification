@@ -1,4 +1,4 @@
-local torch = require 'torch'
+  local torch = require 'torch'
 require "nn"
 local midi = require 'MIDI'
 require "optim"
@@ -7,6 +7,7 @@ require 'DatasetGenerator'
 require 'lfs'
 require 'math'
 
+require 'rnn'
 cuda = false
 if arg[1] == "cuda"
 then
@@ -29,7 +30,7 @@ trainData = {}
 testData = {}
 classes = {}
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
-trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./music",Ratio=.8,Ratio2=.1}
+trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./audio2",Ratio=.8,Ratio2=.1}
 
 
 
@@ -41,10 +42,12 @@ Cudaify = function (mlp)
 	mlp:cuda()
 	local model = nn.Sequential()
   --model:add(nn.Copy('torch.ByteTensor', 'torch.FloatTensor'))
-	model:add(nn.View(1*500*128))
-	model:add(nn.Copy('torch.ByteTensor', 'torch.CudaTensor'))
+   
+	--model:add(nn.Sequencer(nn.View(32)))
+  --model:add(nn.SplitTable(1,2))
+	model:add(nn.Sequencer(nn.Copy('torch.ByteTensor', 'torch.CudaTensor')))
 	model:add(mlp)
-	model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
+	model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
 	return model
 end
 
@@ -53,79 +56,45 @@ DefaultModel = function(num_output)
 
 	--Best NN so far
 	mlp = nn.Sequential()
-	--mlp:add(nn.SpatialContrastiveNormalization(2,image.gaussian1D(5)))
-	--mlp:add(nn.SpatialConvolution(2, 2, 1, 5))
-	--mlp:add(nn.SpatialMaxPooling(2,2,2,2))
-
-	--mlp:add(nn.SpatialContrastiveNormalization(4,image.gaussian1D(5)))
-	--mlp:add(nn.SpatialConvolution(4, 4, 5, 5))
-	--mlp:add(nn.SpatialMaxPooling(2,2,2,2))
-	
-	--16 layers, 30x125 image
+  
         if not cuda then
         print("view")
-	mlp:add(nn.View(1*500*128))
+        mlp:add(nn.SplitTable(1,2))
+	mlp:add(nn.Sequencer(nn.View(32)))
         end
-	mlp:add(nn.Linear(1*500*128, 100))
-	mlp:add(nn.Dropout(.1))
-	mlp:add(nn.Tanh())
-	mlp:add(nn.Linear(100, 50))
-	mlp:add(nn.Dropout(.1))
-	mlp:add(nn.Tanh())
-	mlp:add(nn.Linear(50, 2))
-	mlp:add(nn.LogSoftMax())
+
+  r2 = nn.Recurrent(
+   num_output, nn.Linear(32, num_output), 
+   nn.Linear(num_output, num_output), nn.LogSoftMax(), 
+   500
+)      
+	--mlp:add(nn.Sequencer(nn.FastLSTM(32,num_output)))
+  mlp:add(nn.Sequencer(r2))
+	--mlp:add(nn.Sequencer(nn.LogSoftMax()))
  
-        if(cuda) then
-		--mlp:cuda()
-        	mlp = Cudaify(mlp)         
-        end
-        print(mlp)
+  if(cuda) then
+    print("CUDA")
+    mlp = Cudaify(mlp)         
+  end
 	return mlp
 end
 
 
-
--- Generating a bag of classifiers -- of default model type
-GenerateBagOfClassifiers = function(numberofclasses)
-	local models = {}
-	for i=1,numberofclasses
-	do
-		models[i] = DefaultModel(2)
-	end
-
-	return models
-end
-
-models = GenerateBagOfClassifiers(#classes)
+model = DefaultModel(#classes)
 
 
 --Step 3: Defne Our Loss Function
-criterion = nn.ClassNLLCriterion()
+criterion = nn.SequencerCriterion(nn.ClassNLLCriterion())
 
 
-confusions = {}
+confusion = optim.ConfusionMatrix(classes)
 trainLoggers = {}
 testLoggers = {}
 parameters = {}
 gradParameters = {}
 
-for i=1,#classes
-do
-    confusions[i] = optim.ConfusionMatrix({classes[i], "Not "..classes[i]})
-    --trainLoggers[i] = optim.Logger(paths.concat('.', 'train'..classes[i]..'.log'))
-    --testLoggers[i] = optim.Logger(paths.concat('.', 'test'..classes[i]..'.log'))
-    --print(confusions[i])
-
-    if models[i] then
-        parameters[i],gradParameters[i] = models[i]:getParameters()
-    end
-
-end
-
-
-SkipCounter = {}
-for i=1, #classes do
-   SkipCounter[i] = 0 
+if model then
+  parameters,gradParameters = model:getParameters()
 end
 
 
@@ -136,7 +105,7 @@ optimState = {
     learningRateDecay = 5e-7
 }
 optimMethod = optim.sgd
---print(torch.randperm(11))
+
 
 
 epoch = 1
@@ -149,103 +118,83 @@ function train()
    local time = sys.clock()
 
    -- set model to training mode (for modules that differ in training and testing, like Dropout)
-    for i=1,#classes
-    do
-        models[i]:training()
-    end
+   model:training()
 
    shuffle = torch.randperm(trainData:size())
 
-    for modelIndex = 1, #classes do
-	SkipSize = math.floor((#trainData.Songs - trainData.GenreSizes[modelIndex])/trainData.GenreSizes[modelIndex])
-	print(SkipSize, trainData.GenreSizes[modelIndex], classes[modelIndex])
-        SkipCounter[modelIndex] = 0
+
        for t = 1, trainData:size() do
 
             --print("Label:", trainData.Labels[shuffle[t]], "ModelIndex: ", modelIndex)
-            if not (trainData.Labels[shuffle[t]] == modelIndex) then
-                SkipCounter[modelIndex] = SkipCounter[modelIndex] + 1
-            end
+
             
-            --if 1 == 1 then
-            if (math.fmod(SkipCounter[modelIndex],SkipSize) == 0 or trainData.Labels[shuffle[t]] == modelIndex) then
                local inputs = {}
                table.insert(inputs, trainData.Songs[shuffle[t]])
 
               local targets = {}
-                class = 2
-                if trainData.Labels[shuffle[t]] == modelIndex then class = 1 end
+                class = trainData.Labels[shuffle[t]]
                 
                table.insert(targets, class)      
 
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
                            -- get new parameters
-                           if x ~= parameters[modelIndex] then
-                              parameters[modelIndex]:copy(x)
+                           if x ~= parameters then
+                              parameters:copy(x)
                            end
                            -- reset gradients
-                           gradParameters[modelIndex]:zero()
+                           gradParameters:zero()
 
                            -- f is the average of all criterions
                            local f = 0
 
                            -- evaluate function for complete mini batch
                            for i = 1,#inputs do
-
-			--print("Calculating output")
-			--print("Input: ", inputs[i])
-      --print(inputs[i])
-                           local output = models[modelIndex]:forward(inputs[i])
-			 --print(output)
+                            inputs[i] = inputs[i]:split(100)
+                            inputs[i][#inputs[i]] = nil
+                              --xlua.progress(i,#inputs)
+                              print("HERE")
+                           local output = model:forward(inputs[i])
+                           local c = targets[i]
+                           targets[i] = torch.ones(#inputs[i],100)
+                           targets[i]:fill(c)
                           local err = criterion:forward(output, targets[i])
                            f = f + err        
                           current_loss = current_loss + f
                            local df_do = criterion:backward(output, targets[i])        
-                            models[modelIndex]:backward(inputs[i], df_do) 
-           
-                            confusions[modelIndex]:add(output, targets[i])
+                            model:backward(inputs[i], df_do) 
+                            
+                            for i2 = 1,#output do
+                            for j2 = 1,100 do
+                            confusion:add(output[i2][j2], targets[1][1][1])
+                            end
+                            end
+                            collectgarbage();
                            end
 
                            -- normalize gradients and f(X)
-                           gradParameters[modelIndex]:div(#inputs)
+                           gradParameters:div(#inputs)
                             f = f/#inputs
 
-                           return f,gradParameters[modelIndex]
+                           return f,gradParameters
                 end
-                optim.sgd(feval, parameters[modelIndex], optimState)              
-                end            
+                optim.sgd(feval, parameters, optimState)                         
            end --End of for loop
 
 
 
 
             current_loss = current_loss / trainData:size()
-            --print(current_loss)
+            
            time = sys.clock() - time
            time = time / #trainData
 
            -- print confusion matrix
-           print(confusions[modelIndex])
-
-           -- update logger/plot
---[[
-           trainLoggers[modelIndex]:add{['% mean class accuracy (train set)'] = confusions[modelIndex].totalValid * 100}
-           if true then
-              trainLoggers[modelIndex]:style{['% mean class accuracy (train set)'] = '-'}
-              trainLoggers[modelIndex]:plot()
-           end
---]]
-           -- save/log current net
-           --local filename = paths.concat('.', 'model'..modelIndex..'.net')
-           --os.execute('mkdir -p ' .. sys.dirname(filename))
-           --print('==> saving model to '..filename)
-           --torch.save(filename, model)
+           print(confusion)
 
            -- next epoch
-           confusions[modelIndex]:zero()
+           confusion:zero()
            epoch = epoch + 1
-           end
 end
 current_loss = 0
 --train()
@@ -255,14 +204,12 @@ function test()
    -- local vars
    local time = sys.clock()
 
-    for i=1, #classes do
        if average then
-          cachedparams = parameters[i]:clone()
-          parameters[i]:copy(average)
+          cachedparams = parameters:clone()
+          parameters:copy(average)
        end
-
        -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
-       models[i]:evaluate()
+       model:evaluate()
       print(testData:size())
        -- test over test data
        print('==> testing on test set:')
@@ -271,38 +218,36 @@ function test()
           xlua.progress(t, testData:size())
 
           -- get new sample
-          local input = testData.Songs[t]
+          local input = testData.Songs[t]:split(100)
+          input[i][#input] = nil
           --input = input:double()
-          local target = 2
-          if testData.Labels[t] == i then target = 1 end
-              --if target == 0 then target = 2 end
+          local target = testData.Labels[t]
 
-              local pred = models[i]:forward(input)
+              local pred = model:forward(input)
+
+              local c = target
+              target = torch.ones(#input,100)
+              target:fill(c)
               --pred = torch.reshape(pred, 2)
-              confusions[i]:add(pred, target)
+              for i2 = 1,#output do
+                for j2 = 1,100 do
+                  confusion:add(pred[i2][j2], target[1][1][1])
+                end
+              end
       end
        time = sys.clock() - time
        time = time / testData:size()
        print("\n==> time to test 1 sample = " .. (time*1000) .. 'ms')
 
        -- print confusion matrix
-       print(confusions[i])
-
-       -- update log/plot
-       --testLoggers[i]:add{['% mean class accuracy (test set)'] = confusions[i].totalValid * 100}
-       --if true then
-       --   testLoggers[i]:style{['% mean class accuracy (test set)'] = '-'}
-       --   testLoggers[i]:plot()
-       --end
-
+       print(confusion)
        if average then
           -- restore parameters
-          parameters[i]:copy(cachedparams)
+          parameters:copy(cachedparams)
        end
 
        -- next iteration:
-       confusions[i]:zero()   
-    end     
+       confusion:zero()       
 end
 --test()
 

@@ -1,2 +1,2 @@
 require 'midibinning'
-createTorchContainers2(getFiles('./genres','.au'),.8,.1,100)
+createTorchContainers2(getFiles('./audio','.au'),.8,.1,100)

@@ -265,6 +265,46 @@ function train()
    epoch = epoch + 1
 end
 
+function test()
+   -- local vars
+   local time = sys.clock()
+
+       if average then
+          cachedparams = parameters:clone()
+          parameters:copy(average)
+       end
+       -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
+       model:evaluate()
+      print(testData:size())
+       -- test over test data
+       print('==> testing on test set:')
+       for t = 1,testData:size() do
+          -- disp progress
+          xlua.progress(t, testData:size())
+
+          -- get new sample
+          local input = testData.Songs[t]
+          local is = inputs:split(rhobatch)
+
+
+              local pred = model:forward(input)
+              --pred = torch.reshape(pred, 2)
+      end
+       time = sys.clock() - time
+       time = time / testData:size()
+       print("\n==> time to test 1 sample = " .. (time*1000) .. 'ms')
+
+       -- print confusion matrix
+       if average then
+          -- restore parameters
+          parameters:copy(cachedparams)
+       end
+
+       -- next iteration:
+       confusion:zero()       
+end
+
+
 for i = 1, 400 do
     print("Epoch: " .. i)
     train()
