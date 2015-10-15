@@ -8,7 +8,6 @@ function applyToTensor(tensor)
     --print(tensor)
     local temp = torch.ones(tensor:size(1),32) 
     for i=1,tensor:size(1) do
-        --print(tensor[i])
         temp[i] = numberToTensor(tensor[i])
     end
     return temp
@@ -23,11 +22,27 @@ function numberToTensor(number)
     return tensor
 end
 
+-- make it so that args can be passed in... and handle it
+-- figure out some things to make this better
+function audiodataset:__init(arg)
+	print("DEFAULT CALLED")
+	if type(arg) == "table" then
+		-- take care of the args here
+		if arg.file ~= nil and arg.classname ~= nil then
+			self:setfile(arg.file,arg.classname)
+		end
+	end
+end
 
-function audiodataset:__init(file,clas) 
+function audiodataset:setfile(file,classname)
+	print("called")
+	print(file)
+	print(classname)
 	self.samplerate = -1
 	self.file = file
-	self.class = class
+	self.class = classname
+	self.ext = paths.extname(file)
+	self.filename = paths.basename(file,self.ext)
 end
 
 function audiodataset:loadIntoFFT()
@@ -59,4 +74,19 @@ function audiodataset:getNearTime(time)
 	if self.samplerate == -1 then
 		return nil
 	end
+end
+
+-- A function to serialize this object as a whole including its data
+function audiodataset:serialize(directory)
+	print (self.filename)
+	print(directory)
+	local container = {}
+	container["samplerate"] = self.samplerate
+	container["data"] = self.data
+	container["file"] = self.file
+	container["ext"] = self.ext
+	container["filename"] = self.filename
+	container["class"] = self.class
+	
+	torch.save(paths.concat(directory,self.filename .. ".dat"),container)
 end

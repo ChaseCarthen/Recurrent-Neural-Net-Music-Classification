@@ -30,7 +30,7 @@ trainData = {}
 testData = {}
 classes = {}
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
-trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./audio2",Ratio=.8,Ratio2=.1}
+trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./audio",Ratio=.8,Ratio2=.1}
 
 
 
