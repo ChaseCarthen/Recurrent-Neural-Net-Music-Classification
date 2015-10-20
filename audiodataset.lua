@@ -25,7 +25,7 @@ end
 -- make it so that args can be passed in... and handle it
 -- figure out some things to make this better
 function audiodataset:__init(arg)
-	print("DEFAULT CALLED")
+	--print("DEFAULT CALLED")
 	if type(arg) == "table" then
 		-- take care of the args here
 		if arg.file ~= nil and arg.classname ~= nil then
@@ -89,4 +89,14 @@ function audiodataset:serialize(directory)
 	container["class"] = self.class
 	
 	torch.save(paths.concat(directory,self.filename .. ".dat"),container)
+end
+
+function audiodataset:deserialize(file)
+  dict = torch.load(file)
+  self.data = dict.data
+  self.samplerate = dict.samplerate
+  self.file = dict.file
+  self.ext = dict.extract
+  self.filename = dict.filename
+  self.class = dict.class
 end

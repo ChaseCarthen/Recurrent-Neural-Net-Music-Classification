@@ -1,3 +1,38 @@
+require 'audiodataset'
+cmd = torch.CmdLine()
+cmd:text()
+cmd:text()
+cmd:text("A dataset convertor to torch object.")
+cmd:text()
+cmd:text('Options')
+cmd:option('-d',"audio","Data directory to process.")
+cmd:option('-o',"processed","Processed data directory.")
+cmd:text()
+
+params = cmd:parse(arg or {})
+directory = params.d
+print (params.o)
+if directory ~= nil then
+  -- Search through directory for files
+  for dir in paths.iterdirs(directory) do
+    print(dir)
+    paths.mkdir(paths.concat(paths.cwd(),params.o))
+    outpath = paths.concat(paths.cwd(),params.o,dir)
+    paths.mkdir(outpath)
+    for file in paths.iterfiles(paths.concat(directory,dir)) do
+        print("\t" .. file)
+        ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir}
+        -- now we decided what to load here...
+        ad:loadIntoRaw()
+        ad:serialize(outpath)
+    end
+    
+  end
+end
+
+
+
+
 local torch = require 'torch'
 local midi = require 'MIDI'
 require 'audio'
