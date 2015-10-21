@@ -60,12 +60,14 @@ end
 
 function audiodataset:loadIntoRaw()
 	self.data,self.samplerate = audio.load(self.file)
+	print(self.data:size())
 	collectgarbage()
 end
 
 function audiodataset:loadIntoBinaryFormat()
 	self.data,self.samplerate = audio.load(self.file)
-	self.data = applyToTensor(self.data):byte()
+	
+	self.data = applyToTensor(self.data:byte():t()[1])
 	collectgarbage()
 end
 
@@ -78,7 +80,7 @@ end
 
 -- A function to serialize this object as a whole including its data
 function audiodataset:serialize(directory)
-	print (self.filename)
+	print ("FILENAME: " .. self.filename)
 	print(directory)
 	local container = {}
 	container["samplerate"] = self.samplerate

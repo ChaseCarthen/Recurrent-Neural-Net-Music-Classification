@@ -64,13 +64,15 @@ DefaultModel = function(num_output)
         end
 
   r2 = nn.Recurrent(
-   num_output, nn.Linear(32, num_output), 
-   nn.Linear(num_output, num_output), nn.LogSoftMax(), 
+   20, nn.Linear(32, 20), 
+   nn.Linear(20, 20), nn.Sigmoid(), 
    500
 )      
-	--mlp:add(nn.Sequencer(nn.FastLSTM(32,num_output)))
+	--mlp:add(nn.Sequencer(nn.LSTM(32,20)))
   mlp:add(nn.Sequencer(r2))
-	--mlp:add(nn.Sequencer(nn.LogSoftMax()))
+  --mlp:add(nn.Sequencer(nn.Sigmoid()))
+  mlp:add(nn.Sequencer(nn.Linear(20,num_output)))
+	mlp:add(nn.Sequencer(nn.LogSoftMax()))
  
   if(cuda) then
     print("CUDA")
@@ -166,7 +168,7 @@ function train()
                             
                             for i2 = 1,#output do
                             for j2 = 1,100 do
-                            confusion:add(output[i2][j2], targets[1][1][1])
+                            confusion:add(output[i2][j2], targets[i][1][1])
                             end
                             end
                             collectgarbage();
@@ -219,7 +221,7 @@ function test()
 
           -- get new sample
           local input = testData.Songs[t]:split(100)
-          input[i][#input] = nil
+          input[#input] = nil
           --input = input:double()
           local target = testData.Labels[t]
 
@@ -229,9 +231,9 @@ function test()
               target = torch.ones(#input,100)
               target:fill(c)
               --pred = torch.reshape(pred, 2)
-              for i2 = 1,#output do
+              for i2 = 1,#pred do
                 for j2 = 1,100 do
-                  confusion:add(pred[i2][j2], target[1][1][1])
+                  confusion:add(pred[i2][j2], target[1][1])
                 end
               end
       end
@@ -252,6 +254,7 @@ end
 --test()
 
 for i = 1, 40 do
+    test()
     print("Epoch: ", i)
     train()
     if math.fmod(i,2) == 0 then

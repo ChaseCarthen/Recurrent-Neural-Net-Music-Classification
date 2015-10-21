@@ -1,4 +1,4 @@
-require 'audiodataset'
+--[[require 'audiodataset'
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -7,6 +7,9 @@ cmd:text()
 cmd:text('Options')
 cmd:option('-d',"audio","Data directory to process.")
 cmd:option('-o',"processed","Processed data directory.")
+cmd:option("-r",.8,"Train Split Rate")
+cmd:option("-r2",.1,"Validation Split Rate")
+cmd:option("-r3",.1,"Test Split Rate")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -23,12 +26,12 @@ if directory ~= nil then
         print("\t" .. file)
         ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir}
         -- now we decided what to load here...
-        ad:loadIntoRaw()
+        ad:loadIntoBinaryFormat()
         ad:serialize(outpath)
     end
     
   end
-end
+end]]--
 
 
 
