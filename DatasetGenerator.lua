@@ -1,4 +1,4 @@
---[[require 'audiodataset'
+require 'audiodataset'
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -15,28 +15,68 @@ cmd:text()
 params = cmd:parse(arg or {})
 directory = params.d
 print (params.o)
+trainsplit = params.r
+validsplit = params.r2
+testsplit = params.r3
+
 if directory ~= nil then
   -- Search through directory for files
   for dir in paths.iterdirs(directory) do
     print(dir)
     paths.mkdir(paths.concat(paths.cwd(),params.o))
     outpath = paths.concat(paths.cwd(),params.o,dir)
+    trainpath = paths.concat(paths.cwd(),params.o,dir,"train")
+    testpath = paths.concat(paths.cwd(),params.o,dir,"test")
+    validpath = paths.concat(paths.cwd(),params.o,dir,"valid")
     paths.mkdir(outpath)
+    paths.mkdir(trainpath)
+    paths.mkdir(validpath)
+    paths.mkdir(testpath)
+    audiolist = {}
+    counter = 0
     for file in paths.iterfiles(paths.concat(directory,dir)) do
         print("\t" .. file)
         ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir}
-        -- now we decided what to load here...
-        ad:loadIntoBinaryFormat()
-        ad:serialize(outpath)
+        counter = counter + 1
+        audiolist[counter] = ad
     end
     
+    total = #audiolist
+    numTrain = trainsplit * #audiolist
+    numTest = testsplit * #audiolist
+    numValidation = total - numTrain - numTest
+
+    traincounter = 0
+    testcounter = 0
+    validcounter = 0
+
+    -- This needs to get randomized
+    for i=1,#audiolist do
+        ad = audiolist[i]
+        -- now we decided what to load here...
+        ad:loadIntoBinaryFormat()
+
+        -- decide which path to place it
+        if traincounter < numTrain then 
+            ad:serialize(trainpath)
+            traincounter = traincounter + 1
+        elseif testcounter < numTest then
+            ad:serialize(testpath)
+            testcounter = testcounter + 1
+        else
+            validcounter = validcounter + 1
+            ad:serialize(validpath)
+        end
+        collectgarbage()
+    end
+
   end
-end]]--
+end
 
 
 
 
-local torch = require 'torch'
+--[[local torch = require 'torch'
 local midi = require 'MIDI'
 require 'audio'
 mtbv = require "midiToBinaryVector"
@@ -176,19 +216,19 @@ function SplitAudioData(data, ratio)
         local numTrain = math.floor(shuffle:size(1) * ratio)
         local numTest = shuffle:size(1) - numTrain
 
-        trainData.GenreSizes[classifier[genreKey]] = numTrain
-        testData.GenreSizes[classifier[genreKey]] = numTest           
-
+        trainData.GenreSizes[classifier[genreKey]] --= numTrain
+        --testData.GenreSizes[classifier[genreKey]] = numTest           
+--[[
         for i=1,numTrain do
           TrainingCounter = TrainingCounter + 1
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
-          trainData.Labels[TrainingCounter] = classifier[genreKey]
+          --[[trainData.Labels[TrainingCounter] = classifier[genreKey]
       end
 
       for i=numTrain+1,numTrain+numTest do
         TestingCounter = TestingCounter + 1
             testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
-            testData.Labels[TestingCounter] = classifier[genreKey]
+            --[[estData.Labels[TestingCounter] = classifier[genreKey]
         end
         
 
@@ -228,26 +268,26 @@ function SplitAudioData2(data, ratio,ratio2)
         local numTest = math.floor(shuffle:size(1) * ratio2)
         local numValidation = shuffle:size(1) - numTrain - numTest
 
-        trainData.GenreSizes[classifier[genreKey]] = numTrain
-        testData.GenreSizes[classifier[genreKey]] = numTest           
-        validationData.GenreSizes[classifier[genreKey]] = numValdation
-
+        trainData.GenreSizes[classifier[genreKey]] --= numTrain
+        --[[testData.GenreSizes[classifier[genreKey]] --= numTest           
+        --validationData.GenreSizes[classifier[genreKey]] = numValdation
+        --[[
         for i=1,numTrain do
           TrainingCounter = TrainingCounter + 1
           trainData.Songs[TrainingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
-          trainData.Labels[TrainingCounter] = classifier[genreKey]
-      end
+          --trainData.Labels[TrainingCounter] = classifier[genreKey]
+      --[[end
 
       for i=numTrain+1,numTrain+numTest do
         TestingCounter = TestingCounter + 1
             testData.Songs[TestingCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
-            testData.Labels[TestingCounter] = classifier[genreKey]
+            --[[testData.Labels[TestingCounter] = classifier[genreKey]
         end
 
         for i=numTrain+numTest+1,numTrain+numTest+numValidation do
             ValidationCounter = ValidationCounter + 1
             validationData.Songs[ValidationCounter] = data[genreKey].Songs[shuffle[i]]--:transpose(1,2):clone()
-            validationData.Labels[ValidationCounter] = classifier[genreKey]
+            --[[validationData.Labels[ValidationCounter] = classifier[genreKey]
         end
         
 
@@ -301,3 +341,4 @@ end
 
 
 
+]]

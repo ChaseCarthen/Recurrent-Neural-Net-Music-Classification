@@ -1,4 +1,16 @@
-  local torch = require 'torch'
+cmd = torch.CmdLine()
+cmd:text()
+cmd:text()
+cmd:text("A music classifier of doom.")
+cmd:text()
+cmd:text('Options')
+cmd:option("--cuda",false,"Use cuda")
+cmd:option("-data","processed","Specify the directory with data.")
+cmd:text()
+
+params = cmd:parse(arg or {})
+
+local torch = require 'torch'
 require "nn"
 local midi = require 'MIDI'
 require "optim"
@@ -8,11 +20,7 @@ require 'lfs'
 require 'math'
 
 require 'rnn'
-cuda = false
-if arg[1] == "cuda"
-then
-	cuda = true
-end
+cuda = params.cuda
 
 if cuda
 then
@@ -253,8 +261,7 @@ function test()
 end
 --test()
 
-for i = 1, 40 do
-    test()
+for i = 1, 400 do
     print("Epoch: ", i)
     train()
     if math.fmod(i,2) == 0 then
