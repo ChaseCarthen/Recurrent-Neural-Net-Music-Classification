@@ -94,6 +94,7 @@ function audiodataset:serialize(directory)
 end
 
 function audiodataset:deserialize(file)
+	print(file)
   dict = torch.load(file)
   self.data = dict.data
   self.samplerate = dict.samplerate
