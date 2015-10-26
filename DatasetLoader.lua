@@ -1,42 +1,20 @@
-List = {}
-function List.new ()
-  return {first = 0, last = -1}
-end
+require 'audiodataset'
 
-function List.pushleft (list, value)
-  local first = list.first - 1
-  list.first = first
-  list[first] = value
-end
+-- Function utils
+function loadListData(type,list,start,limit)
+	for i=start,math.min(start+limit,#list) do
+			if type == "audio" then 
+				-- Load audio
+				print ("Loading " .. list[i])
+			end
+	end
 
-function List.pushright (list, value)
-  local last = list.last + 1
-  list.last = last
-  list[last] = value
+	return math.min(start+limit,#list)
 end
-
-function List.popleft (list)
-  local first = list.first
-  if first > list.last then error("list is empty") end
-  local value = list[first]
-  list[first] = nil        -- to allow garbage collection
-  list.first = first + 1
-  return value
-end
-
-function List.popright (list)
-  local last = list.last
-  if list.first > last then error("list is empty") end
-  local value = list[last]
-  list[last] = nil         -- to allow garbage collection
-  list.last = last - 1
-  return value
-end
-
 
 local DatasetLoader = torch.class('DatasetLoader')
 
-function DatasetLoader:__init(datadir,format)
+function DatasetLoader:__init(datadir,format,type)
 	self.datadir = datadir
 	self.train = {}
 	self.valid = {}
@@ -44,6 +22,7 @@ function DatasetLoader:__init(datadir,format)
 	self.traincount = 0
 	self.testcount = 0
 	self.validcount = 0
+	self.type = 'audio'--type
 	for i in paths.iterfiles(paths.concat(datadir,"train")) do
 		self.traincount = self.traincount + 1
 		self.train[self.traincount] = i
@@ -85,15 +64,21 @@ end
 
 function DatasetLoader:loadNextSet()
 	if self.mode == "train" then
-		self.counter = self.limit
-		return false
+		self.counter = loadListData(self.type,train,self.counter,self.limit)
+		return self.counter == self.traincount
+
 	elseif self.mode == "test" then
-		self.counter = self.limit
-		return false
+		self.counter = loadListData(self.type,test,self.counter,self.limit)
+		return self.counter == self.testcount
+
 	elseif self.mode == "validation" then
-		self.counter = self.limit
-		return false
+		self.counter = loadListData(self.type,valid,self.counter,self.limit)
+		return self.counter == self.validcount
+
 	end
 	return true -- This means everything is done.
 end
+
+
+
 

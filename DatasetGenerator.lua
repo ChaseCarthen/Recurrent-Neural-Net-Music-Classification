@@ -28,22 +28,21 @@ if directory ~= nil then
     trainpath = paths.concat(paths.cwd(),params.o,"train")
     testpath = paths.concat(paths.cwd(),params.o,"test")
     validpath = paths.concat(paths.cwd(),params.o,"valid")
-    paths.mkdir(outpath)
+    --paths.mkdir(outpath)
     paths.mkdir(trainpath)
     paths.mkdir(validpath)
     paths.mkdir(testpath)
     audiolist = {}
     counter = 0
     for file in paths.iterfiles(paths.concat(directory,dir)) do
-        print("\t" .. file)
         ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir}
         counter = counter + 1
         audiolist[counter] = ad
     end
     
     total = #audiolist
-    numTrain = trainsplit * #audiolist
-    numTest = testsplit * #audiolist
+    numTrain = math.floor(trainsplit * #audiolist)
+    numTest = math.floor(testsplit * #audiolist)
     numValidation = total - numTrain - numTest
 
     traincounter = 0
