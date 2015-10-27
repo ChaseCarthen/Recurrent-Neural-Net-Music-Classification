@@ -27,6 +27,19 @@ function DatasetLoader:__init(datadir,format,type)
 	self.testcount = 0
 	self.validcount = 0
 	self.type = 'audio'--type
+	file = torch.DiskFile(paths.concat(datadir,"class.txt"))
+	file:quiet()
+	str = " "
+	self.classes = {}
+	counter = 0
+	while str ~= "" do
+		counter = counter + 1
+		str = file:readString("*l")
+		print(str)
+		if str ~= '' then
+		self.classes[counter] = str
+		end
+	end
 	for i in paths.iterfiles(paths.concat(datadir,"train")) do
 		self.traincount = self.traincount + 1
 		self.train[self.traincount] = paths.concat(datadir,"train",i)

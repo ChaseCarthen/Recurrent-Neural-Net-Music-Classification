@@ -1,3 +1,17 @@
+local torch = require 'torch'
+require "nn"
+local midi = require 'MIDI'
+require "optim"
+require "midiToBinaryVector"
+require 'DatasetLoader'
+require 'lfs'
+require 'math'
+
+require 'rnn'
+
+
+require 'model'
+
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -9,17 +23,6 @@ cmd:option("-data","processed","Specify the directory with data.")
 cmd:text()
 
 params = cmd:parse(arg or {})
-
-local torch = require 'torch'
-require "nn"
-local midi = require 'MIDI'
-require "optim"
-require "midiToBinaryVector"
-require 'DatasetGenerator'
-require 'lfs'
-require 'math'
-
-require 'rnn'
 cuda = params.cuda
 
 if cuda
@@ -37,9 +40,16 @@ local math = require 'math'
 trainData = {}
 testData = {}
 classes = {}
+
+dl = DatasetLoader("processed","au","audio")
+
+classes = dl.classes
+
 --trainData, testData, classes = GetTrainAndTestData("./music", .8)
 trainData,testData,validationData,classes = GetTrainAndTestData{BaseDir="./audio",Ratio=.8,Ratio2=.1}
 
+
+DatasetLoader()
 
 
 print(classes)
@@ -282,3 +292,8 @@ torch.save(filename, models)
 print(classes)
 
 
+
+function evaluateModel(type,model,callback)
+
+
+end
