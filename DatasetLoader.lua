@@ -1,19 +1,24 @@
 require 'audiodataset'
 
 -- Function utils
-function loadListData(type,list,start,limit)
+function loadListData(type,list,start,limit,shufflelist)
+	outdata = {}
+	local counter = 1
 	for i=start+1,math.min(start+limit,#list) do
 			if type == "audio" then 
 				-- Load audio
 				--print(list[i])
 				temp = audiodataset()
-				temp:deserialize(list[i])
+				temp:deserialize(list[shufflelist[i]])
+				outdata[counter] = temp
+				counter = counter + 1
 				print(temp.data:size())
 				print(temp.class)
 			end
 	end
 
-	return math.min(start+limit,#list)
+	outdata["Counter"] = math.min(start+limit,#list) 
+	return outdata
 end
 
 local DatasetLoader = torch.class('DatasetLoader')
@@ -23,6 +28,7 @@ function DatasetLoader:__init(datadir,format,type)
 	self.train = {}
 	self.valid = {}
 	self.test = {}
+	self.shufflelist = {}
 	self.traincount = 0
 	self.testcount = 0
 	self.validcount = 0
@@ -65,32 +71,50 @@ function DatasetLoader:loadTraining(numToLoad)
 	self.counter = 1
 	self.limit = 100
 	self.mode = "train"
+	self.shufflelist = torch.randperm(self.traincount)
 end
 
 function DatasetLoader:loadTesting(numToLoad)
 	self.counter = 1
 	self.limit = 100
 	self.mode = "test"
+	self.shufflelist = torch.randperm(self.testcount)
 end
 
 function DatasetLoader:loadValidation(numToLoad)
 	self.counter = 1
 	self.limit = 100
 	self.mode = "validation"
+	self.shufflelist = torch.randperm(self.validcount)
+end
+
+function DatasetLoader:numberOfTrainingSamples()
+	return self.traincount
+end
+
+function DatasetLoader:numberOfTestSamples()
+	return self.testcount
+end
+
+function DatasetLoader:numberOfValidSamples()
+	self.validcount
 end
 
 function DatasetLoader:loadNextSet()
 	if self.mode == "train" then
-		self.counter = loadListData(self.type,self.train,self.counter,self.limit)
-		return self.counter == self.traincount
+		local out = loadListData(self.type,self.train,self.counter,self.limit,self.shufflelist)
+		self.counter = out.counter
+		return out
 
 	elseif self.mode == "test" then
-		self.counter = loadListData(self.type,self.test,self.counter,self.limit)
-		return self.counter == self.testcount
+		local out = loadListData(self.type,self.test,self.counter,self.limit,self.shufflelist)
+		self.counter = out.counter
+		return out
 
 	elseif self.mode == "validation" then
-		self.counter = loadListData(self.type,self.valid,self.counter,self.limit)
-		return self.counter == self.validcount
+		local out = loadListData(self.type,self.valid,self.counter,self.limit,self.shufflelist)
+		self.counter = out.counter
+		return out
 
 	end
 	return true -- This means everything is done.
