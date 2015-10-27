@@ -293,7 +293,39 @@ print(classes)
 
 
 
-function evaluateModel(type,model,callback)
+local RNNC = torch.class ("RNNC","model")
 
+function RNNC:__init()
+  model.__init(self)
+end
 
+function RNNC:addlayer(layer)
+  if self.model == nil then
+    self.model = nn.Sequential()
+  end
+  self.model:add(layer)
+end
+
+function RNNC:addLSTM(input,output)
+  self.addlayer(nn.FastLSTM(input,output))
+end
+
+--- Need to figure out something better for this
+function RNNC:addRNN(rnn)
+  self.addlayer(rnn)
+end
+
+function printmodel()
+  print(self.model)
+end
+
+function RNNC:setup()
+
+end
+
+function RNNC:forward(input)
+  return self.model:forward(input) -- return some kind of output here
+end
+
+function RNNC:backward(input,output,target)
 end

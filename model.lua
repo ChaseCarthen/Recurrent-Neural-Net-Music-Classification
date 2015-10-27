@@ -37,6 +37,10 @@ function model:backward()
 	print ("I do nothing just a stub overwrite me.")
 end
 
+function model:addlayer()
+	print ("I do nothing just a stub overwrite me.")
+end
+
 function model:save(filename)
 	if self.model ~= nil then
 		torch.save(filename,self.model)
