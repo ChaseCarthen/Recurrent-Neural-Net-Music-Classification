@@ -10,7 +10,7 @@ function applyToTensor(tensor)
     for i=1,tensor:size(1) do
         temp[i] = numberToTensor(tensor[i])
     end
-    return temp
+    return temp:byte()
 end
 
 
@@ -19,7 +19,7 @@ function numberToTensor(number)
     for i=1,32 do
         tensor[i] = bit.rshift( bit.band( bit.lshift(1,i-1), number ), i-1 )
     end
-    return tensor
+    return tensor:byte()
 end
 
 -- make it so that args can be passed in... and handle it
@@ -35,9 +35,9 @@ function audiodataset:__init(arg)
 end
 
 function audiodataset:setfile(file,classname)
-	print("called")
-	print(file)
-	print(classname)
+	--print("called")
+	--print(file)
+	--print(classname)
 	self.samplerate = -1
 	self.file = file
 	self.class = classname
@@ -60,14 +60,14 @@ end
 
 function audiodataset:loadIntoRaw()
 	self.data,self.samplerate = audio.load(self.file)
-	print(self.data:size())
+	--print(self.data:size())
 	collectgarbage()
 end
 
 function audiodataset:loadIntoBinaryFormat()
 	self.data,self.samplerate = audio.load(self.file)
 	
-	self.data = applyToTensor(self.data:byte():t()[1])
+	self.data = applyToTensor(self.data:t()[1])
 	collectgarbage()
 end
 
@@ -80,8 +80,8 @@ end
 
 -- A function to serialize this object as a whole including its data
 function audiodataset:serialize(directory)
-	print ("FILENAME: " .. self.filename)
-	print(directory)
+	--print ("FILENAME: " .. self.filename)
+	--print(directory)
 	local container = {}
 	container["samplerate"] = self.samplerate
 	container["data"] = self.data
@@ -94,7 +94,7 @@ function audiodataset:serialize(directory)
 end
 
 function audiodataset:deserialize(file)
-	print(file)
+	--print(file)
   dict = torch.load(file)
   self.data = dict.data
   self.samplerate = dict.samplerate

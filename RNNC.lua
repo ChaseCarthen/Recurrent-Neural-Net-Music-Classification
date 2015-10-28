@@ -1,5 +1,6 @@
 require 'model'
-
+require 'rnn'
+require 'nn'
 local RNNC = torch.class ("RNNC","model")
 
 function RNNC:__init()
@@ -22,7 +23,7 @@ function RNNC:cudaify(string)
   local model = nn.Sequential()
   model:add(nn.Sequencer(nn.Copy(string, 'torch.CudaTensor')))
   model:add(self.model)
-  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', string)))
+  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
   self.model = model
 end
 
@@ -32,8 +33,19 @@ function RNNC:initParameters()
   end
 end
 
+function RNNC:getGradParameters()
+  --print ("grad parameters")
+  return self.gradParameters
+end
+
+function RNNC:getParameters()
+  --print (self.parameters)
+  --print("parameters")
+  return self.parameters
+end
+
 function RNNC:addLSTM(input,output)
-  self.addlayer(nn.FastLSTM(input,output))
+  self:addlayer(nn.Sequencer(nn.LSTM(input,output)))
 end
 
 --- Need to figure out something better for this
@@ -51,15 +63,19 @@ end
 
 function RNNC:forward(input)
   if self.mode == "train" then
-    self.model:training()
+    --self.model:training()
+    --print ("training")
   elseif self.mode == "test" then
-    self.model:evaluate()
+    --self.model:evaluate()
   end
   return self.model:forward(input) -- return some kind of output here
 end
 
 function RNNC:backward(input,output,targets)
-  local err = self.criterion:forward(output, targets)     
+  --print (output)
+  --print (targets)
+  --print(input)
+  local err = self.criterion:forward(output, input)     
   local df_do = self.criterion:backward(output, targets)        
   self.model:backward(input, df_do) 
   return err

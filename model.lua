@@ -1,3 +1,4 @@
+require 'rnn'
 local model = torch.class('model')
 function model:__init()
 self.mode = "train"
@@ -6,10 +7,16 @@ end
 
 function model:train()
 self.mode = "train"
+if self.model ~= nil then
+	self.model:training()
+end
 end
 
 function model:test()
 self.mode = "test"
+if self.model ~= nil then
+	self.model:evaluate()
+end
 end
 
 -- The only first comment here -- my assumption is that :cuda() is defined.
