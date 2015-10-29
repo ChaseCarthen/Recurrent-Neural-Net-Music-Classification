@@ -9,7 +9,7 @@ require 'lfs'
 require 'math'
 require 'torch'
 require 'rnn'
-
+require 'image'
 
 require 'model'
 
@@ -66,18 +66,36 @@ DefaultModel = function(num_output)
   local model = RNNC() 
 
   mlp=nn.Sequential()
-mlp:add(nn.Linear(32,32))
+mlp:add(nn.Linear(32,16))
 mlp:add(nn.Tanh())
 
 rhobatch = 10000
 rho = 50
 r2 = nn.Recurrent(
-   32, mlp, 
+   16, mlp, 
+   nn.Linear(16, 16), nn.Tanh(), 
+   rho
+)
+
+  mlp2=nn.Sequential()
+mlp2:add(nn.Linear(16,32))
+mlp2:add(nn.Tanh())
+
+--rhobatch = 10000
+--rho = 50
+r3 = nn.Recurrent(
+   32, mlp2, 
    nn.Linear(32, 32), nn.Sigmoid(), 
    rho
 )
+r2 = nn.Sequencer(r2)
+r3 = nn.Sequencer(r3)
+encoder = nn.Sequential()
+encoder:add(r2)
+--print(encoder:forward({torch.randn(10,128)}))
   --model:addLSTM(32,32)
-  model:addlayer(nn.Sequencer(r2))--nn.Sequencer(nn.Sigmoid()))
+  model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
+  model:addlayer(r3)
   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
   end
@@ -162,7 +180,8 @@ function train()
                             
                             --[[for i2 = 1,#output do
                             for j2 = 1,100 do
-                            confusion:add(output[i2][j2], targets[i][1][1])
+                            confu,100 do
+                            confusion:sion:add(output[i2][j2], targets[i][1][1])
                             end
                             end]]
                             collectgarbage();
@@ -177,7 +196,12 @@ function train()
                                 --print(tensorToNumber(output[o]))
                                 --print(song[o][1])
                               end 
-                              
+                              encoder:float()
+                              output = encoder:forward(inputs)
+                              output = join:forward(output)
+                              --print (output)
+                              image.save(data[i].filename .."epoch" .. i .. ".pgm",image.scale(output,2000,1000))
+                              encoder:cuda()
                               audio.save(epoch .. data[i].filename .. "song" .. i .. ".au",song, 44100/2)
                             end
                            end
