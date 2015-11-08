@@ -73,7 +73,7 @@ rhobatch = 10000
 rho = 50
 r2 = nn.Recurrent(
    16, mlp, 
-   nn.Linear(16, 16), nn.Tanh(), 
+   nn.Linear(16, 16), nn.ReLU(), 
    rho
 )
 
@@ -200,7 +200,7 @@ function train()
                               output = encoder:forward(inputs)
                               output = join:forward(output)
                               --print (output)
-                              image.save(data[i].filename .."epoch" .. i .. ".pgm",image.scale(output,2000,1000))
+                              image.save(data[i].filename .."epoch" .. epoch .. ".pgm",image.scale(output,2000,1000))
                               encoder:cuda()
                               audio.save(epoch .. data[i].filename .. "song" .. i .. ".au",song, 44100/2)
                             end

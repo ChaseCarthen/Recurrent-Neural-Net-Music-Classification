@@ -2,6 +2,8 @@
 midi = require "MIDI" -- http://www.pjb.com.au/comp/lua/MIDI.html
 require "torch" -- http://torch.ch/
 require "image"
+require 'sys'
+require 'audio'
 math = require 'math'
 -- Set the default tensor type to floats
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -18,6 +20,65 @@ end
 return out
 end
 
+function SortPartition(notes)
+  o = 1
+  counter = 1
+  --print (notes)
+  sorted = {}
+  if #notes == 1 then
+    return notes
+  end
+  for i=1,#notes,2 do
+    if i + 1 <= #notes then
+      s = {}
+      o = 1
+      k = 1
+      l = 1
+      set = false
+      for j=1,#notes[i]+#notes[i+1] do
+        if #notes[i]+1 ~= k and #notes[i+1]+1 ~= l and notes[i][k].NoteBegin <= notes[i+1][l].NoteBegin then
+          s[o] = notes[i][k]
+          o = o + 1 
+          k = k + 1
+        elseif #notes[i]+1 ~= k and #notes[i+1]+1 ~= l and notes[i+1][l].NoteBegin <= notes[i][k].NoteBegin then
+          s[o] = notes[i+1][l]
+          l = l + 1
+          o = o +1
+        else 
+          if #notes[i] + 1 == k then
+            s[o] = notes[i+1][l]
+            o = o + 1
+            l = l + 1
+          elseif #notes[i+1] + 1 == l then
+            s[o] = notes[i][k]
+            o = o + 1
+            k = k + 1
+          end 
+        end
+      end
+      else
+        s = {}
+        for j=1,#notes[i] do
+          s[j] = notes[i][j] 
+        end
+    end
+    sorted[counter] = s
+    counter = counter + 1 
+  end
+  --print (sorted)
+  return SortPartition(sorted)
+end
+
+
+function NoteMergeSort(notes)
+  unsorted = {}
+  for i=1,#notes do
+    unsorted[i] = {notes[i]}
+  end
+  sorted = SortPartition(unsorted)
+  --print(sorted)
+  return sorted
+end
 
 
 --[[
@@ -139,4 +200,95 @@ for k,v in pairs(binVec)
   s = ""
 end
 end
+
+
+-- A file opening function -- for getting the correct
+openMidi = function(filename)
+
+local f = assert(io.open(filename, "r"))
+local t = f:read("*all")
+if t == nil then
+  f:close()
+  return nil
+end
+-- Set some local max and min variabes
+local min = 100000000
+local max = 10
+
+-- This variabe keeps track of the current notes
+local notes = {}
+iteration = 0
+
+-- Concert the read in midi to a score object
+m = midi.opus2score(midi.to_millisecs(midi.midi2opus(t)))
+for k, v in pairs(m) 
+do 
+  if type(v)=="table" then
+    for k2,v2 in pairs(v)
+      do
+      if v2[1] == "note" then
+        iteration = iteration + 1
+        notes[iteration] = {}
+        notes[iteration]["NoteBegin"] = v2[2]
+        notes[iteration]["NoteDuration"] = v2[3]
+        notes[iteration]["Note"] = v2[5]
+        --print ("Note Begin: " .. v2[2])
+        --print ("Note Duration: " .. v2[3])
+        --print ("Note: " .. v2[5])
+      end
+
+    end
+
+  end
+
+
+end
+
+print("MERGE SORT")
+
+out = NoteMergeSort(notes)[1]
+--print(notes)
+return out
+end 
+
+-- A function for generating a target vector in two forms
+function generateMidiTargetVector(filename,notes)
+  data,samplerate = audio.load(filename)
+  print(data:size())
+  endtime = notes[#notes].NoteBegin + notes[#notes].NoteDuration
+  starttime = notes[1].NoteBegin
+  totalduration = (endtime - starttime) / 1000
+  sampletime = (1/samplerate)
+  arraylength = totalduration / sampletime
+
+  currenttime = 0
+  local binVector = torch.ByteTensor(128,data:size(1)):zero()
+  for i=1,#notes do
+    from = notes[i].NoteBegin * sampletime
+    to = notes[i].NoteBegin + notes[i].NoteDuration
+    for j =to,from do
+      --print(j)
+      binVector[notes[i].Note][j] = 1
+    end
+    --print(i)
+  end
+
+end
+
+function generateWav(filename)
+
+  filebase = paths.basename(filename,"mid")
+
+  if not paths.filep(filebase .. ".wav") then
+    sys.execute('timidity ' .. filename .. " -Ow -o " .. filebase .. ".wav")
+  end
+
+end
+
+filename = "./music/latin/todotodo.mid"
+
+notes = openMidi(filename)
+generateWav(filename)
+filebase = paths.basename(filename,"mid")
+generateMidiTargetVector(filebase .. '.wav',notes)
 
