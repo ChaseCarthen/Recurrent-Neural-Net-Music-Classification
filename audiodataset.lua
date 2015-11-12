@@ -1,6 +1,7 @@
 require 'dp'
 require 'torchx'
 require 'audio'
+require 'midiToBinaryVector'
 local signal = require 'signal'
 local audiodataset = torch.class('audiodataset')
 
@@ -28,8 +29,12 @@ function audiodataset:__init(arg)
 	--print("DEFAULT CALLED")
 	if type(arg) == "table" then
 		-- take care of the args here
-		if arg.file ~= nil and arg.classname ~= nil then
+		if arg.file ~= nil and arg.classname ~= nil and arg.type == "audio" then
 			self:setfile(arg.file,arg.classname)
+		elseif arg.file ~= nil and arg.type == "midi" then
+			--self:loadMidi(arg.file)
+			self.file = arg.file
+			self.ext = paths.extname(arg.file)
 		end
 	end
 end
@@ -43,6 +48,22 @@ function audiodataset:setfile(file,classname)
 	self.class = classname
 	self.ext = paths.extname(file)
 	self.filename = paths.basename(file,self.ext)
+end
+
+function audiodataset:loadMidi(filename,wavdirectory)
+	if filename == nil then
+		filename = self.file
+		self.filename = paths.basename(self.file,self.ext)
+	end
+	print ("HERE")
+	print(filename)
+	notes = openMidi(filename)
+	directory = paths.dirname(filename)
+	filebase = paths.basename(filename,"mid")
+	print(wavdirectory .. "/" .. filebase .. '.wav')
+	generateWav(filename,wavdirectory .. "/")
+	self.data,self.binVector,self.samplerate = generateMidiTargetVector(wavdirectory .. "/" .. filebase .. '.wav',notes)
+	self.data = applyToTensor(self.data:t()[1])
 end
 
 function audiodataset:loadIntoFFT()
@@ -89,12 +110,12 @@ function audiodataset:serialize(directory)
 	container["ext"] = self.ext
 	container["filename"] = self.filename
 	container["class"] = self.class
-	
+	container["binVector"] = self.binVector
 	torch.save(paths.concat(directory,self.filename .. ".dat"),container)
 end
 
 function audiodataset:deserialize(file)
-	--print(file)
+	print(file)
   dict = torch.load(file)
   self.data = dict.data
   self.samplerate = dict.samplerate
@@ -102,4 +123,5 @@ function audiodataset:deserialize(file)
   self.ext = dict.extract
   self.filename = dict.filename
   self.class = dict.class
+  self.binVector = dict.binVector
 end

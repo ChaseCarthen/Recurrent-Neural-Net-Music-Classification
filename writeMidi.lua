@@ -2,7 +2,7 @@
 
 
  function writeMidi(fileName,pianoRoll,sampleRate,noteLength)
-
+print ("write Midi ")
  local my_score = {
     96,  -- ticks per beat
     {    -- first track

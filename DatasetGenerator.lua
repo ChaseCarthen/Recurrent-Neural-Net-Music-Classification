@@ -5,6 +5,8 @@ cmd:text()
 cmd:text("A dataset convertor to torch object.")
 cmd:text()
 cmd:text('Options')
+cmd:option("--midi",false,"Processing for midi..")
+cmd:option('-m',"","Process midi data")
 cmd:option('-d',"audio","Data directory to process.")
 cmd:option('-o',"processed","Processed data directory.")
 cmd:option("-r",.8,"Train Split Rate")
@@ -42,8 +44,12 @@ if directory ~= nil then
     audiolist = {}
     counter = 0
     for file in paths.iterfiles(paths.concat(directory,dir)) do
-        --print(file)
-        ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir}
+        print(file)
+        if not params.midi then
+            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="audio"}
+        else
+            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="midi"} 
+        end
 
         counter = counter + 1
         audiolist[counter] = ad
@@ -61,7 +67,12 @@ if directory ~= nil then
     for i=1,#audiolist do
         ad = audiolist[i]
         -- now we decided what to load here...
-        ad:loadIntoBinaryFormat()
+        if not params.midi then
+            ad:loadIntoBinaryFormat()
+        elseif params.midi then
+            -- Call midi function
+            ad:loadMidi(nil,trainpath)
+        end
         print(ad.file .. "DONE")
         -- decide which path to place it
         if traincounter < numTrain then 

@@ -12,7 +12,7 @@ require 'rnn'
 require 'image'
 
 require 'model'
-
+require 'writeMidi'
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -78,14 +78,14 @@ r2 = nn.Recurrent(
 )
 
   mlp2=nn.Sequential()
-mlp2:add(nn.Linear(16,32))
+mlp2:add(nn.Linear(16,128))
 mlp2:add(nn.Tanh())
 
 --rhobatch = 10000
 --rho = 50
 r3 = nn.Recurrent(
-   32, mlp2, 
-   nn.Linear(32, 32), nn.Sigmoid(), 
+   128, mlp2, 
+   nn.Linear(128, 128), nn.Sigmoid(), 
    rho
 )
 r2 = nn.Sequencer(r2)
@@ -173,8 +173,15 @@ function train()
                            --targets[i] = torch.ones(#input,100)
                            --targets[i]:fill(c)
                            --input = nil
-                           
-                          local err = model:backward(inputs,output,inputs)
+                          print(data[i].binVector:size())
+                          print(inputs)
+                          print(output)
+                          print("----------------------------------")
+                          print(data[i].binVector:size(1))
+                          print("----------------------------------")
+                          target = data[i].binVector:t():float():split(rhobatch)
+                          target[#target] = nil
+                          local err = model:backward(inputs,output,target)--inputs)
                            f = f + err        
 
                             
@@ -184,8 +191,13 @@ function train()
                             confusion:sion:add(output[i2][j2], targets[i][1][1])
                             end
                             end]]
+                            
+                            --join = nn.JoinTable(1)
+                              --output = join:forward(output) * 56
+                            --writeMidi("test.mid",output[1],100,100)
+                            torch.save("test.dat",output)
                             collectgarbage();
-                            if(epoch % 40 == 0 and i % 2 == 0) then
+                            --[[if(epoch % 40 == 0 and i % 2 == 0) then
                               join = nn.JoinTable(1)
                               output = join:forward(output)
                               output:round()
@@ -203,7 +215,7 @@ function train()
                               image.save(data[i].filename .."epoch" .. epoch .. ".pgm",image.scale(output,2000,1000))
                               encoder:cuda()
                               audio.save(epoch .. data[i].filename .. "song" .. i .. ".au",song, 44100/2)
-                            end
+                            end]]
                            end
 
                            -- normalize gradients and f(X)
@@ -258,11 +270,11 @@ function test()
           output = join:forward(output)
           output:round()
           song = torch.zeros(output:size(1),1)
-          for o =1,output:size(1) do
+          --[[for o =1,output:size(1) do
             song[o][1] = tensorToNumber(output[o])
           end 
                               
-          audio.save(epoch .. data[i].filename .. "testsong" .. i .. ".au",song, 44100/2)
+          audio.save(epoch .. data[i].filename .. "testsong" .. i .. ".au",song, 44100/2)]]
               --local c = target
               --target = torch.ones(#input,100)
               --target:fill(c)
@@ -291,7 +303,7 @@ for i = 1, 400 do
     --test()
     train()
     if i % 40 == 0 then
-        test()
+        --test()
     end
 end
 

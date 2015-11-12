@@ -23,9 +23,10 @@ end
 function SortPartition(notes)
   o = 1
   counter = 1
+  print(#notes)
   --print (notes)
   sorted = {}
-  if #notes == 1 then
+  if #notes <= 1 then
     return notes
   end
   for i=1,#notes,2 do
@@ -253,6 +254,7 @@ end
 
 -- A function for generating a target vector in two forms
 function generateMidiTargetVector(filename,notes)
+  print "generating Target Vector"
   data,samplerate = audio.load(filename)
   print(data:size())
   endtime = notes[#notes].NoteBegin + notes[#notes].NoteDuration
@@ -272,23 +274,22 @@ function generateMidiTargetVector(filename,notes)
     end
     --print(i)
   end
-
+  return data,binVector,samplerate
 end
 
-function generateWav(filename)
+function generateWav(filename,directory)
 
   filebase = paths.basename(filename,"mid")
 
-  if not paths.filep(filebase .. ".wav") then
-    sys.execute('timidity ' .. filename .. " -Ow -o " .. filebase .. ".wav")
+  if not paths.filep('"' .. directory .. filebase .. ".wav" .. '"') then
+    sys.execute('timidity ' .. '"' .. filename .. '"' .. " -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
   end
 
 end
 
-filename = "./music/latin/todotodo.mid"
-
-notes = openMidi(filename)
-generateWav(filename)
-filebase = paths.basename(filename,"mid")
-generateMidiTargetVector(filebase .. '.wav',notes)
+--filename = "./music/latin/todotodo.mid"
+--notes = openMidi(filename)
+--generateWav(filename)
+--filebase = paths.basename(filename,"mid")
+--generateMidiTargetVector(filebase .. '.wav',notes)
 
