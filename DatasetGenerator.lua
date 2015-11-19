@@ -72,6 +72,7 @@ if directory ~= nil then
         elseif params.midi then
             -- Call midi function
             ad:loadMidi(nil,trainpath)
+            ad:generateImage()
         end
         print(ad.file .. "DONE")
         -- decide which path to place it

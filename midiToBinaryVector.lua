@@ -265,11 +265,18 @@ function generateMidiTargetVector(filename,notes)
 
   currenttime = 0
   local binVector = torch.ByteTensor(128,data:size(1)):zero()
+  print(data:size())
+  print(binVector:size())
+
   for i=1,#notes do
-    from = notes[i].NoteBegin * sampletime
-    to = notes[i].NoteBegin + notes[i].NoteDuration
-    for j =to,from do
-      --print(j)
+    --print(notes[i].NoteBegin)
+    from = math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1
+    to = math.min ( math.floor((notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0) * samplerate)+1, data:size(1))
+        print(from)
+      print(to)
+    for j =from,to do
+      --print("set")
+      --print(notes[i].Note)
       binVector[notes[i].Note][j] = 1
     end
     --print(i)
@@ -282,7 +289,7 @@ function generateWav(filename,directory)
   filebase = paths.basename(filename,"mid")
 
   if not paths.filep('"' .. directory .. filebase .. ".wav" .. '"') then
-    sys.execute('timidity ' .. '"' .. filename .. '"' .. " -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
+    sys.execute('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
   end
 
 end

@@ -2,6 +2,7 @@ require 'dp'
 require 'torchx'
 require 'audio'
 require 'midiToBinaryVector'
+require 'image'
 local signal = require 'signal'
 local audiodataset = torch.class('audiodataset')
 
@@ -114,6 +115,10 @@ function audiodataset:serialize(directory)
 	torch.save(paths.concat(directory,self.filename .. ".dat"),container)
 end
 
+function audiodataset:generateImage()
+	image.save(self.filename .. ".pgm", image.scale(self.binVector *50,1000,1000))
+end
+
 function audiodataset:deserialize(file)
 	print(file)
   dict = torch.load(file)
@@ -124,4 +129,5 @@ function audiodataset:deserialize(file)
   self.filename = dict.filename
   self.class = dict.class
   self.binVector = dict.binVector
+
 end

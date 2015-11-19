@@ -68,21 +68,21 @@ function DatasetLoader:__init(datadir,format,type)
 end
 
 function DatasetLoader:loadTraining(numToLoad)
-	self.counter = 1
+	self.counter = 0
 	self.limit = 10
 	self.mode = "train"
 	self.shufflelist = torch.randperm(self.traincount)
 end
 
 function DatasetLoader:loadTesting(numToLoad)
-	self.counter = 1
+	self.counter = 0
 	self.limit = 10
 	self.mode = "test"
 	self.shufflelist = torch.randperm(self.testcount)
 end
 
 function DatasetLoader:loadValidation(numToLoad)
-	self.counter = 1
+	self.counter = 0
 	self.limit = 10
 	self.mode = "validation"
 	self.shufflelist = torch.randperm(self.validcount)

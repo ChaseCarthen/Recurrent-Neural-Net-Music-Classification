@@ -66,14 +66,14 @@ DefaultModel = function(num_output)
   local model = RNNC() 
 
   mlp=nn.Sequential()
-mlp:add(nn.Linear(32,16))
+mlp:add(nn.Linear(32,128))
 mlp:add(nn.Tanh())
 
 rhobatch = 10000
-rho = 50
+rho = 5000
 r2 = nn.Recurrent(
-   16, mlp, 
-   nn.Linear(16, 16), nn.ReLU(), 
+   128, mlp, 
+   nn.Linear(128, 128), nn.Sigmoid(), 
    rho
 )
 
@@ -91,11 +91,13 @@ r3 = nn.Recurrent(
 r2 = nn.Sequencer(r2)
 r3 = nn.Sequencer(r3)
 encoder = nn.Sequential()
-encoder:add(r2)
+--encoder:add(r2)
 --print(encoder:forward({torch.randn(10,128)}))
   --model:addLSTM(32,32)
-  model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
-  model:addlayer(r3)
+  --model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
+  model:addlayer(nn.Sequencer(nn.FastLSTM(32,128)))
+  model:addlayer(nn.Sequencer(nn.Sigmoid()))
+  --model:addlayer(r3)
   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
   end
@@ -140,6 +142,7 @@ function train()
    shuffle = torch.randperm(numTrain)
    done = false
    loss = 0
+   count = 0
    while not done do
     data = dl:loadNextSet()
    	done = data.done
@@ -166,24 +169,25 @@ function train()
                             --input[#input] = nil
                             inputs[#inputs] = nil
                            --print(input)
+                          target = data[i].binVector:t():float():split(rhobatch)
+                          target[#target] = nil
 
-                           local output = model:forward(inputs)
+                           for testl = 1,#inputs do
+                            input = {inputs[testl]}
+                           local output = model:forward(input)
                            --print(output)
                            --local c = data[i].class
                            --targets[i] = torch.ones(#input,100)
                            --targets[i]:fill(c)
                            --input = nil
-                          print(data[i].binVector:size())
-                          print(inputs)
-                          print(output)
-                          print("----------------------------------")
-                          print(data[i].binVector:size(1))
-                          print("----------------------------------")
-                          target = data[i].binVector:t():float():split(rhobatch)
-                          target[#target] = nil
-                          local err = model:backward(inputs,output,target)--inputs)
-                           f = f + err        
 
+                          local err = model:backward(input,output,{target[testl]})--inputs)
+                           f = f + err
+                           count = count + 1
+                            if testl == 5 and epoch % 10 == 0 then
+                            torch.save("test" .. i .. "epoch" .. epoch .. ".dat",output)
+                            end        
+                         end
                             
                             --[[for i2 = 1,#output do
                             for j2 = 1,100 do
@@ -194,8 +198,8 @@ function train()
                             
                             --join = nn.JoinTable(1)
                               --output = join:forward(output) * 56
-                            --writeMidi("test.mid",output[1],100,100)
-                            torch.save("test.dat",output)
+
+                            --torch.save("test.dat",output)
                             collectgarbage();
                             --[[if(epoch % 40 == 0 and i % 2 == 0) then
                               join = nn.JoinTable(1)
@@ -219,8 +223,9 @@ function train()
                            end
 
                            -- normalize gradients and f(X)
-                           model:getGradParameters():div(#data)
-                            f = f/#data
+                           print(#data)
+                           model:getGradParameters():div(count)--#data)
+                            f = f/count--#data
 
                            return f,model:getGradParameters()
                 end
@@ -228,7 +233,7 @@ function train()
                 loss = loss + fs2[1]
    end -- End of while loop
 
-          print(loss/numTrain)
+          print(loss/count)--numTrain)
            --time = sys.clock() - time
            --time = time / #trainData
 

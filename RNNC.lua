@@ -73,8 +73,7 @@ end
 
 function RNNC:backward(input,output,targets)
   --print (output)
-  print ("++++++++++++++++++++++++++++++++++++++")
-  print (targets)
+
   --print(input)
   local err = self.criterion:forward(output, targets)     
   local df_do = self.criterion:backward(output, targets)        
