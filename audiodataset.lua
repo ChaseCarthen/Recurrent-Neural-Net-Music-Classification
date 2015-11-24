@@ -51,6 +51,8 @@ function audiodataset:setfile(file,classname)
 	self.filename = paths.basename(file,self.ext)
 end
 
+-- make this load the notes of the midi in 
+-- save the target vector generation for later
 function audiodataset:loadMidi(filename,wavdirectory)
 	if filename == nil then
 		filename = self.file
@@ -64,8 +66,20 @@ function audiodataset:loadMidi(filename,wavdirectory)
 	print(wavdirectory .. "/" .. filebase .. '.wav')
 	generateWav(filename,wavdirectory .. "/")
 	self.data,self.binVector,self.samplerate = generateMidiTargetVector(wavdirectory .. "/" .. filebase .. '.wav',notes)
+	self.file = wavdirectory .. "/" .. filebase .. '.wav'
 	self.data = applyToTensor(self.data:t()[1])
 end
+
+
+--- here are two functions that need to be implemented
+function audiodataset:generateMidiSpectrogrmTarget(windowSize,stride)
+
+end
+
+function audiodataset:GenerateMidiRawTarget()
+
+end
+------
 
 function audiodataset:loadIntoFFT()
 	self.data,self.samplerate = audio.load(self.file)

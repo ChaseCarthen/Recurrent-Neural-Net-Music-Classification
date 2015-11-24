@@ -36,11 +36,14 @@ if directory ~= nil then
     trainpath = paths.concat(paths.cwd(),params.o,"train")
     testpath = paths.concat(paths.cwd(),params.o,"test")
     validpath = paths.concat(paths.cwd(),params.o,"valid")
+    wavpath = paths.concat(path.cwd(),params.o,"wav")
+
     
     --paths.mkdir(outpath)
     paths.mkdir(trainpath)
     paths.mkdir(validpath)
     paths.mkdir(testpath)
+    paths.mkdir(wavpath)
     audiolist = {}
     counter = 0
     for file in paths.iterfiles(paths.concat(directory,dir)) do
@@ -71,7 +74,7 @@ if directory ~= nil then
             ad:loadIntoBinaryFormat()
         elseif params.midi then
             -- Call midi function
-            ad:loadMidi(nil,trainpath)
+            ad:loadMidi(nil,wavpath)
             ad:generateImage()
         end
         print(ad.file .. "DONE")

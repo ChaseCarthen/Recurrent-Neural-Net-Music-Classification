@@ -95,7 +95,9 @@ encoder = nn.Sequential()
 --print(encoder:forward({torch.randn(10,128)}))
   --model:addLSTM(32,32)
   --model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
-  model:addlayer(nn.Sequencer(nn.FastLSTM(32,128)))
+  model:addlayer(nn.BiSequencer(nn.FastLSTM(32,100)))
+  model:addlayer(nn.Sequencer(nn.Tanh()))
+  model:addlayer(nn.Sequencer(nn.Linear(200,128)))
   model:addlayer(nn.Sequencer(nn.Sigmoid()))
   --model:addlayer(r3)
   if(cuda) then
@@ -171,10 +173,12 @@ function train()
                            --print(input)
                           target = data[i].binVector:t():float():split(rhobatch)
                           target[#target] = nil
-
+                           out = {}
                            for testl = 1,#inputs do
                             input = {inputs[testl]}
                            local output = model:forward(input)
+                           --print(output)
+                           out[testl] = output
                            --print(output)
                            --local c = data[i].class
                            --targets[i] = torch.ones(#input,100)
@@ -184,11 +188,12 @@ function train()
                           local err = model:backward(input,output,{target[testl]})--inputs)
                            f = f + err
                            count = count + 1
-                            if testl == 5 and epoch % 10 == 0 then
-                            torch.save("test" .. i .. "epoch" .. epoch .. ".dat",output)
-                            end        
+      
                          end
-                            
+                        if epoch % 4 == 0 then
+                            torch.save("test" .. i .. "epoch" .. epoch .. ".dat",out)
+                            out = nil
+                        end  
                             --[[for i2 = 1,#output do
                             for j2 = 1,100 do
                             confu,100 do
