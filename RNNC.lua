@@ -21,10 +21,10 @@ end
 function RNNC:cudaify(string)
   self.model:cuda()
   local model = nn.Sequential()
-  model:add(nn.Sequencer(nn.Copy(string, 'torch.CudaTensor')))
+  model:add(nn.Copy(string, 'torch.CudaTensor'))
   model:add(self.model)
-  model:add(nn.Sequencer(nn.Copy('torch.CudaTensor', 'torch.FloatTensor')))
-  self.model = model
+  model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor'))
+  self.model = nn.Sequencer(model)
 end
 
 function RNNC:initParameters()

@@ -10,7 +10,7 @@ require 'math'
 require 'torch'
 require 'rnn'
 require 'image'
-
+require 'nn'
 require 'model'
 require 'writeMidi'
 cmd = torch.CmdLine()
@@ -69,7 +69,7 @@ DefaultModel = function(num_output)
 mlp:add(nn.Linear(32,128))
 mlp:add(nn.Tanh())
 
-rhobatch = 10000
+rhobatch = 200000
 rho = 5000
 r2 = nn.Recurrent(
    128, mlp, 
@@ -95,10 +95,8 @@ encoder = nn.Sequential()
 --print(encoder:forward({torch.randn(10,128)}))
   --model:addLSTM(32,32)
   --model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
-  model:addlayer(nn.BiSequencer(nn.FastLSTM(32,100)))
-  model:addlayer(nn.Sequencer(nn.Tanh()))
-  model:addlayer(nn.Sequencer(nn.Linear(200,128)))
-  model:addlayer(nn.Sequencer(nn.Sigmoid()))
+  model:addlayer(nn.FastLSTM(32,128))
+  model:addlayer(nn.Sigmoid())
   --model:addlayer(r3)
   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
@@ -172,11 +170,10 @@ function train()
                             inputs[#inputs] = nil
                            --print(input)
                           target = data[i].binVector:t():float():split(rhobatch)
-                          target[#target] = nil
                            out = {}
-                           for testl = 1,#inputs do
+                           --for testl = 1,#inputs do
                             input = {inputs[testl]}
-                           local output = model:forward(input)
+                           local output = model:forward(inputs)
                            --print(output)
                            out[testl] = output
                            --print(output)
@@ -184,13 +181,15 @@ function train()
                            --targets[i] = torch.ones(#input,100)
                            --targets[i]:fill(c)
                            --input = nil
-
-                          local err = model:backward(input,output,{target[testl]})--inputs)
+                         
+                          local err = model:backward(inputs,output,target)--inputs)
                            f = f + err
-                           count = count + 1
+                          
       
-                         end
+                         --end
+                          count = count + 1
                         if epoch % 4 == 0 then
+                            print("SAVING")
                             torch.save("test" .. i .. "epoch" .. epoch .. ".dat",out)
                             out = nil
                         end  
