@@ -16,7 +16,7 @@ require 'writeMidi'
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
-cmd:text("A music classifier of doom.")
+cmd:text("A music transcription neural network for going from midi to wav.")
 cmd:text()
 cmd:text('Options')
 cmd:option("--cuda",false,"Use cuda")
@@ -69,7 +69,7 @@ DefaultModel = function(num_output)
 mlp:add(nn.Linear(32,128))
 mlp:add(nn.Tanh())
 
-rhobatch = 200000
+rhobatch = 20000
 rho = 5000
 r2 = nn.Recurrent(
    128, mlp, 
@@ -95,7 +95,9 @@ encoder = nn.Sequential()
 --print(encoder:forward({torch.randn(10,128)}))
   --model:addLSTM(32,32)
   --model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
-  model:addlayer(nn.FastLSTM(32,128))
+  model:addlayer(nn.FastLSTM(32,200))
+  model:addlayer(nn.Tanh())
+  model:addlayer(nn.FastLSTM(200,128))
   model:addlayer(nn.Sigmoid())
   --model:addlayer(r3)
   if(cuda) then
@@ -171,59 +173,24 @@ function train()
                            --print(input)
                           target = data[i].binVector:t():float():split(rhobatch)
                            out = {}
-                           --for testl = 1,#inputs do
+                           for testl = 1,#inputs do
                             input = {inputs[testl]}
-                           local output = model:forward(inputs)
-                           --print(output)
-                           out[testl] = output
-                           --print(output)
-                           --local c = data[i].class
-                           --targets[i] = torch.ones(#input,100)
-                           --targets[i]:fill(c)
-                           --input = nil
-                         
-                          local err = model:backward(inputs,output,target)--inputs)
+                           local output = model:forward(input)
+                           --print(output[1]:sum())
+                           out[testl] = output[1]:clone()
+                          local err = model:backward(input,output,{target[testl]})--inputs)
                            f = f + err
                           
-      
-                         --end
                           count = count + 1
-                        if epoch % 4 == 0 then
-                            print("SAVING")
+      
+                         end
+
+                        if epoch % 50 == 0 then
                             torch.save("test" .. i .. "epoch" .. epoch .. ".dat",out)
                             out = nil
                         end  
-                            --[[for i2 = 1,#output do
-                            for j2 = 1,100 do
-                            confu,100 do
-                            confusion:sion:add(output[i2][j2], targets[i][1][1])
-                            end
-                            end]]
-                            
-                            --join = nn.JoinTable(1)
-                              --output = join:forward(output) * 56
-
-                            --torch.save("test.dat",output)
                             collectgarbage();
-                            --[[if(epoch % 40 == 0 and i % 2 == 0) then
-                              join = nn.JoinTable(1)
-                              output = join:forward(output)
-                              output:round()
-                              song = torch.zeros(output:size(1),1)
-                              for o =1,output:size(1) do
-                                --print(output[o])
-                                song[o][1] = tensorToNumber(output[o])
-                                --print(tensorToNumber(output[o]))
-                                --print(song[o][1])
-                              end 
-                              encoder:float()
-                              output = encoder:forward(inputs)
-                              output = join:forward(output)
-                              --print (output)
-                              image.save(data[i].filename .."epoch" .. epoch .. ".pgm",image.scale(output,2000,1000))
-                              encoder:cuda()
-                              audio.save(epoch .. data[i].filename .. "song" .. i .. ".au",song, 44100/2)
-                            end]]
+
                            end
 
                            -- normalize gradients and f(X)

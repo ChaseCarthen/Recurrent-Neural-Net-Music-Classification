@@ -36,7 +36,7 @@ if directory ~= nil then
     trainpath = paths.concat(paths.cwd(),params.o,"train")
     testpath = paths.concat(paths.cwd(),params.o,"test")
     validpath = paths.concat(paths.cwd(),params.o,"valid")
-    wavpath = paths.concat(path.cwd(),params.o,"wav")
+    wavpath = paths.concat(paths.cwd(),params.o,"wav")
 
     
     --paths.mkdir(outpath)
@@ -65,10 +65,11 @@ if directory ~= nil then
     traincounter = 0
     testcounter = 0
     validcounter = 0
-
+    audiolistcount = #audiolist
     -- This needs to get randomized
-    for i=1,#audiolist do
-        ad = audiolist[i]
+    while #audiolist > 0 do
+        ad = audiolist[#audiolist]
+        audiolist[#audiolist] = nil
         -- now we decided what to load here...
         if not params.midi then
             ad:loadIntoBinaryFormat()

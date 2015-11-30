@@ -89,10 +89,7 @@ output: spits out a torch float tensor.
 --]]
 
 setIntensity = function(binVector,note,i,intensity)
-binVector[1][note][i] = 1--(binVector[note][i] + intensity )--/ 128)
---binVector[2][note][i] = (binVector[2][note][i] + 1 )
---if(binVector[note])
---print(binVector[note][i])
+binVector[1][note][i] = 1
 end
 midiToBinaryVec = function(filename)
 print(filename)
@@ -254,9 +251,9 @@ end
 
 -- A function for generating a target vector in two forms
 function generateMidiTargetVector(filename,notes)
-  print "generating Target Vector"
+  --print "generating Target Vector"
   data,samplerate = audio.load(filename)
-  print(data:size())
+  --print(data:size())
   endtime = notes[#notes].NoteBegin + notes[#notes].NoteDuration
   starttime = notes[1].NoteBegin
   totalduration = (endtime - starttime) / 1000
@@ -265,15 +262,15 @@ function generateMidiTargetVector(filename,notes)
 
   currenttime = 0
   local binVector = torch.ByteTensor(128,data:size(1)):zero()
-  print(data:size())
-  print(binVector:size())
+  --print(data:size())
+  --print(binVector:size())
 
   for i=1,#notes do
     --print(notes[i].NoteBegin)
     from = math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1
     to = math.min ( math.floor((notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0) * samplerate)+1, data:size(1))
-        print(from)
-      print(to)
+        --print(from)
+      --print(to)
     for j =from,to do
       --print("set")
       --print(notes[i].Note)
