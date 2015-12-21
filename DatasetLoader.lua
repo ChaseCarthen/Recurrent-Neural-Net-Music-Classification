@@ -2,7 +2,7 @@ require 'audiodataset'
 
 -- Function utils
 function loadListData(type,list,start,limit,shufflelist)
-	outdata = {}
+	local outdata = {}
 	local counter = 1
 	for i=start+1,math.min(start+limit,#list) do
 			if type == "audio" then 

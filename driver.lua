@@ -69,7 +69,7 @@ DefaultModel = function(num_output)
 mlp:add(nn.Linear(32,128))
 mlp:add(nn.Tanh())
 
-rhobatch = 20000
+rhobatch = 30000
 rho = 5000
 r2 = nn.Recurrent(
    128, mlp, 
@@ -91,15 +91,9 @@ r3 = nn.Recurrent(
 r2 = nn.Sequencer(r2)
 r3 = nn.Sequencer(r3)
 encoder = nn.Sequential()
---encoder:add(r2)
---print(encoder:forward({torch.randn(10,128)}))
-  --model:addLSTM(32,32)
-  --model:addlayer(r2)--nn.Sequencer(nn.Sigmoid()))
-  model:addlayer(nn.FastLSTM(32,200))
-  model:addlayer(nn.Tanh())
-  model:addlayer(nn.FastLSTM(200,128))
-  model:addlayer(nn.Sigmoid())
-  --model:addlayer(r3)
+  model:addlayer(nn.BiSequencer(nn.FastLSTM(32,128)))
+  model:addlayer(nn.Sequencer(nn.Linear(256,128)))
+  model:addlayer(nn.Sequencer(nn.Sigmoid()))
   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
   end
@@ -147,10 +141,12 @@ function train()
    count = 0
    while not done do
     data = dl:loadNextSet()
+    collectgarbage();
    	done = data.done
 
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
+
                            -- get new parameters
                            if x ~= model:getParameters() then
                               print (x)
@@ -165,18 +161,17 @@ function train()
                            -- evaluate function for complete mini batch
                            for i = 1,#data do
                             xlua.progress(i, #data)
-                            --print(i)
-                            --input = data[i].data:split(rhobatch)
+
                             inputs = data[i].data:float():split(rhobatch)
-                            --input[#input] = nil
+
                             inputs[#inputs] = nil
-                           --print(input)
+
                           target = data[i].binVector:t():float():split(rhobatch)
-                           out = {}
+                           local out = {}
                            for testl = 1,#inputs do
                             input = {inputs[testl]}
                            local output = model:forward(input)
-                           --print(output[1]:sum())
+
                            out[testl] = output[1]:clone()
                           local err = model:backward(input,output,{target[testl]})--inputs)
                            f = f + err
@@ -185,12 +180,12 @@ function train()
       
                          end
 
-                        if epoch % 50 == 0 then
-                            torch.save("test" .. i .. "epoch" .. epoch .. ".dat",out)
-                            out = nil
+                        if epoch % 5 == 0 and count % 4 == 0 then
+                            torch.save("test" .. count .. "epoch" .. epoch .. ".dat",out)
+                            
                         end  
-                            collectgarbage();
-
+                            
+                        out = nil
                            end
 
                            -- normalize gradients and f(X)
@@ -202,13 +197,10 @@ function train()
                 end
                 _,fs2 = optim.rmsprop(feval, model:getParameters(), optimState)
                 loss = loss + fs2[1]
+
    end -- End of while loop
 
-          print(loss/count)--numTrain)
-           --time = sys.clock() - time
-           --time = time / #trainData
-
-           -- print confusion matrix
+          print(loss/count)
            print(confusion)
 
            -- next epoch
@@ -246,35 +238,13 @@ function test()
           output = join:forward(output)
           output:round()
           song = torch.zeros(output:size(1),1)
-          --[[for o =1,output:size(1) do
-            song[o][1] = tensorToNumber(output[o])
-          end 
-                              
-          audio.save(epoch .. data[i].filename .. "testsong" .. i .. ".au",song, 44100/2)]]
-              --local c = target
-              --target = torch.ones(#input,100)
-              --target:fill(c)
-              --pred = torch.reshape(pred, 2)
-              --for i2 = 1,#pred do
-               -- for j2 = 1,100 do
-                --  confusion:add(pred[i2][j2], target[1][1])
-                --end
-              --end
+
           end
-      end
-      -- time = sys.clock() - time
-      --time = time / testData:size()
-       --print("\n==> time to test 1 sample = " .. (time*1000) .. 'ms')
-
-       -- print confusion matrix
-       print(confusion)
-
-       -- next iteration:
-       confusion:zero()       
+      end     
 end
---test()
 
-for i = 1, 400 do
+
+for i = 1, 5 do
     print("Epoch: ", i)
     --test()
     train()

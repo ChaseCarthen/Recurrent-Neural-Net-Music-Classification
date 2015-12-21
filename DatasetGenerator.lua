@@ -32,7 +32,8 @@ if directory ~= nil then
     print(dir)
     file:writeString(dir .. "\n")
     
-    outpath = paths.concat(paths.cwd(),params.o,dir)
+    outpath = paths.concat(pat}
+hs.cwd(),params.o,dir)
     trainpath = paths.concat(paths.cwd(),params.o,"train")
     testpath = paths.concat(paths.cwd(),params.o,"test")
     validpath = paths.concat(paths.cwd(),params.o,"valid")
