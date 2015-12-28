@@ -38,6 +38,8 @@ function trainer:__init(args)
 		self.optimModule = args.optimModule
 	end
 
+	self.dataSplit = args.dataSplit or 10000
+
 	-- What is our target and input..
 	self.target = args.target
 	self.input = args.input
@@ -47,31 +49,33 @@ function trainer:__init(args)
 	-- Watch norm of weights --
 	-- enable graphing --
 	self.graphing = args.graphing or false
-
+	self.epoch = 1
 end
 
 function trainer:splitData(data)
 	local input = nil
 	local target = nil
-
+	--print(data.midi:size())
+	--print(data.audio:size())
 	if self.target == "midi" then
-		target = data[i].midi:t():float():split(rhobatch)	
+		target = data.midi:float():split(self.dataSplit)	
 	else
-		target = data[i].audio:t():float():split(rhobatch)
+		target = data.audio:float():split(self.dataSplit)
 	end
 
-	if self.target == "midi" then
-		input = data[i].midi:t():float():split(rhobatch)	
+	if self.input == "midi" then
+		input = data.midi:float():split(self.dataSplit)	
 	else
-		input = data[i].audio:t():float():split(rhobatch)
+		input = data.audio:float():split(self.dataSplit)
 	end
+
 	return input,target
 end
 
 function trainer:train()
 
    -- epoch tracker
-   epoch = epoch or 1
+   self.epoch = self.epoch or 1
 
    -- local vars
    local time = sys.clock()
@@ -129,8 +133,8 @@ function trainer:train()
       
                          end
 
-                        if epoch % 5 == 0 and count % 4 == 0 then
-                            torch.save("test" .. count .. "epoch" .. epoch .. ".dat",out)
+                        if self.epoch % 5 == 0 and count % 4 == 0 then
+                            torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)
                             
                         end  
                             
@@ -153,7 +157,11 @@ function trainer:train()
 
            -- next epoch
            confusion:zero()
-           epoch = epoch + 1
+           self.epoch = self.epoch + 1
+end
+
+function trainer:done()
+	return self.epoch == self.epochLimit
 end
 
 function trainer:test()

@@ -13,6 +13,7 @@ require 'image'
 require 'nn'
 require 'model'
 require 'writeMidi'
+require 'trainer'
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -91,8 +92,8 @@ r3 = nn.Recurrent(
 r2 = nn.Sequencer(r2)
 r3 = nn.Sequencer(r3)
 encoder = nn.Sequential()
-  model:addlayer(nn.BiSequencer(nn.FastLSTM(32,128)))
-  model:addlayer(nn.Sequencer(nn.Linear(256,128)))
+  model:addlayer(nn.Sequencer(nn.FastLSTM(32,128)))
+  model:addlayer(nn.Sequencer(nn.Linear(128,128)))
   model:addlayer(nn.Sequencer(nn.Sigmoid()))
   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
@@ -114,153 +115,29 @@ confusion = optim.ConfusionMatrix(classes)
 model:initParameters()
 
 
+
 optimState = {
     learningRate = 0.003,
     weightDecay = 0.01,
     momentum = .01,
     learningRateDecay = 1e-7
-}
+  }
 
+train = trainer{epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio"}
 
-epoch = 1
-function train()
-
-   -- epoch tracker
-   epoch = epoch or 1
-
-   -- local vars
-   local time = sys.clock()
-
-   -- set model to training mode (for modules that differ in training and testing, like Dropout)
-   model:train()
-   dl:loadTraining()
-   numTrain = dl:numberOfTrainingSamples() 
-   shuffle = torch.randperm(numTrain)
-   done = false
-   loss = 0
-   count = 0
-   while not done do
-    data = dl:loadNextSet()
-    collectgarbage();
-   	done = data.done
-
-              -- create closure to evaluate f(X) and df/dX
-              local feval = function(x)
-
-                           -- get new parameters
-                           if x ~= model:getParameters() then
-                              print (x)
-                              model:getParameters():copy(x)
-                           end
-                           -- reset gradients
-                           model:getGradParameters():zero()
-
-                           -- f is the average of all criterions
-                           local f = 0
-
-                           -- evaluate function for complete mini batch
-                           for i = 1,#data do
-                            xlua.progress(i, #data)
-
-                            inputs = data[i].data:float():split(rhobatch)
-
-                            inputs[#inputs] = nil
-
-                          target = data[i].binVector:t():float():split(rhobatch)
-                           local out = {}
-                           for testl = 1,#inputs do
-                            input = {inputs[testl]}
-                           local output = model:forward(input)
-
-                           out[testl] = output[1]:clone()
-                          local err = model:backward(input,output,{target[testl]})--inputs)
-                           f = f + err
-                          
-                          count = count + 1
-      
-                         end
-
-                        if epoch % 5 == 0 and count % 4 == 0 then
-                            torch.save("test" .. count .. "epoch" .. epoch .. ".dat",out)
-                            
-                        end  
-                            
-                        out = nil
-                           end
-
-                           -- normalize gradients and f(X)
-                           print(#data)
-                           model:getGradParameters():div(count)--#data)
-                            f = f/count--#data
-
-                           return f,model:getGradParameters()
-                end
-                _,fs2 = optim.rmsprop(feval, model:getParameters(), optimState)
-                loss = loss + fs2[1]
-
-   end -- End of while loop
-
-          print(loss/count)
-           print(confusion)
-
-           -- next epoch
-           confusion:zero()
-           epoch = epoch + 1
-end -- end function
---train()
-
-
-function test()
-   -- local vars
-   local time = sys.clock()
-
-       -- set model to evaluate mode (for modules that differ in training and testing, like Dropout)
-       model:test()
-       -- test over test data
-       print('==> testing on test set:')
-       done = false
-       while not done  do
-          -- disp progress
-          --xlua.progress(t, testData:size())
-          dl:loadValidation()
-          data = dl:loadNextSet()
-          done = data.done
-          for i=1,#data do 
-          -- get new sample
-          local input = data[i].data:split(rhobatch)
-          
-          --input[#input] = nil
-          --input = input:double()
-          input[#input] = nil
-          --print (input)
-          local output = model:forward(input)
-          join = nn.JoinTable(1)
-          output = join:forward(output)
-          output:round()
-          song = torch.zeros(output:size(1),1)
-
-          end
-      end     
-end
-
-
-for i = 1, 5 do
-    print("Epoch: ", i)
+while not train:done() do
+    print("Epoch: ", train.epoch)
     --test()
-    train()
-    if i % 40 == 0 then
+    --train()
+    train:train()
+    if train.epoch % 40 == 0 then
         --test()
     end
 end
 
 
 -- save/log current net
-local filename = paths.concat('.', 'SNNModel.net')
-os.execute('mkdir -p ' .. sys.dirname(filename))
-print('==> saving model to '..filename)
-torch.save(filename, models)
-
-
-
-
-print(classes)
+--local filename = paths.concat('.', 'SNNModel.net')
+--os.execute('mkdir -p ' .. sys.dirname(filename))
+--print('==> saving model to '..filename)
+--torch.save(filename, models)
