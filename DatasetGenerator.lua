@@ -5,13 +5,15 @@ cmd:text()
 cmd:text("A dataset convertor to torch object.")
 cmd:text()
 cmd:text('Options')
-cmd:option("--midi",false,"Processing for midi..")
+cmd:option("--spectrogram",false,"Processing for spectrogram")
 cmd:option('-m',"","Process midi data")
 cmd:option('-d',"audio","Data directory to process.")
 cmd:option('-o',"processed","Processed data directory.")
 cmd:option("-r",.8,"Train Split Rate")
 cmd:option("-r2",.1,"Validation Split Rate")
 cmd:option("-r3",.1,"Test Split Rate")
+cmd:option("-windowSize",8092,"Window size for spectrogram.")
+cmd:option("-stride",512,"spectrogram stride size")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -32,8 +34,7 @@ if directory ~= nil then
     print(dir)
     file:writeString(dir .. "\n")
     
-    outpath = paths.concat(pat}
-hs.cwd(),params.o,dir)
+    outpath = paths.concat(paths.cwd(),params.o,dir)
     trainpath = paths.concat(paths.cwd(),params.o,"train")
     testpath = paths.concat(paths.cwd(),params.o,"test")
     validpath = paths.concat(paths.cwd(),params.o,"valid")
@@ -49,10 +50,10 @@ hs.cwd(),params.o,dir)
     counter = 0
     for file in paths.iterfiles(paths.concat(directory,dir)) do
         print(file)
-        if not params.midi then
+        if not params.spectrogram then
             ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="audio"}
         else
-            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="midi"} 
+            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="spectrogram"}
         end
 
         counter = counter + 1
@@ -72,11 +73,13 @@ hs.cwd(),params.o,dir)
         ad = audiolist[#audiolist]
         audiolist[#audiolist] = nil
         -- now we decided what to load here...
-        if not params.midi then
-            ad:loadIntoBinaryFormat()
-        elseif params.midi then
+        if not params.spectrogram then
             -- Call midi function
-            ad:loadMidi(nil,wavpath)
+            ad:loadAudioMidi(nil,wavpath)
+            ad:generateImage()
+        else
+            -- Load spectrogram representation
+            ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
             ad:generateImage()
         end
         print(ad.file .. "DONE")

@@ -1,4 +1,7 @@
 require 'audiodataset'
+-- DatasetLoader
+-- This will only load audio datasets
+
 
 -- Function utils
 function loadListData(type,list,start,limit,shufflelist)
@@ -41,7 +44,7 @@ function DatasetLoader:__init(datadir,format,type)
 	while str ~= "" do
 		counter = counter + 1
 		str = file:readString("*l")
-		--print(str)
+
 		if str ~= '' then
 			self.classes[counter] = str
 		end

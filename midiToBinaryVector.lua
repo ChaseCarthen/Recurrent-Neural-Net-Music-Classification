@@ -278,14 +278,51 @@ function generateMidiTargetVector(filename,notes)
     end
     --print(i)
   end
-  return data,binVector,samplerate
+  return data,binVector:t(),samplerate
 end
+
+
+-- A function for generating a target vector in two forms
+function generateMidiSpectrogramVector(data,samplerate,notes)
+  --print "generating Target Vector"
+  --data,samplerate = audio.load(filename)
+  --print(data:size())
+  endtime = notes[#notes].NoteBegin + notes[#notes].NoteDuration
+  starttime = notes[1].NoteBegin
+  totalduration = (endtime - starttime) / 1000
+  print("==========================")
+  print(totalduration)
+  print(1.0/samplerate*data:size(1))
+  print("==========================")
+
+  currenttime = 0
+  local binVector = torch.ByteTensor(128,data:size(1)):zero()
+  --print(data:size())
+  --print(binVector:size())
+
+  for i=1,#notes do
+    --print(notes[i].NoteBegin)
+    from = math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1
+    to = math.min ( math.floor((notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0) * samplerate)+1, data:size(1))
+        --print(from)
+      --print(to)
+    for j =from,to do
+      --print("set")
+      --print(notes[i].Note)
+      binVector[notes[i].Note][j] = 1
+    end
+    --print(i)
+  end
+  return data:t(),binVector:t(),samplerate
+end
+
 
 function generateWav(filename,directory)
 
   filebase = paths.basename(filename,"mid")
 
   if not paths.filep('"' .. directory .. filebase .. ".wav" .. '"') then
+    --print('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
     sys.execute('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
   end
 

@@ -1,13 +1,14 @@
 -- Ash catch them all
 -- A class that will train,test, and validate models
 -- using optim
+-- This class assumes that it will be given a audiodataset
 require 'xlua'
 require 'optim'
 local trainer = torch.class("trainer")
 
 
-trainer:__init(args)
-	if args.epochLimit != nil then
+function trainer:__init(args)
+	if args.epochLimit ~= nil then
 		self.epochLimit = args.epochLimit
 	else
 		self.epochLimit = 100
@@ -36,6 +37,11 @@ trainer:__init(args)
 	else
 		self.optimModule = args.optimModule
 	end
+
+	-- What is our target and input..
+	self.target = args.target
+	self.input = args.input
+
 	-- hyperparameter watching to be added -- 
 	-- Watch error rate --
 	-- Watch norm of weights --
@@ -44,8 +50,25 @@ trainer:__init(args)
 
 end
 
+function trainer:splitData(data)
+	local input = nil
+	local target = nil
 
-trainer:train()
+	if self.target == "midi" then
+		target = data[i].midi:t():float():split(rhobatch)	
+	else
+		target = data[i].audio:t():float():split(rhobatch)
+	end
+
+	if self.target == "midi" then
+		input = data[i].midi:t():float():split(rhobatch)	
+	else
+		input = data[i].audio:t():float():split(rhobatch)
+	end
+	return input,target
+end
+
+function trainer:train()
 
    -- epoch tracker
    epoch = epoch or 1
@@ -84,11 +107,15 @@ trainer:train()
                            for i = 1,#data do
                             xlua.progress(i, #data)
 
-                            inputs = data[i].data:float():split(rhobatch)
+                          --[[  inputs = data[i].data:float():split(rhobatch)
 
                             inputs[#inputs] = nil
-
-                          target = data[i].binVector:t():float():split(rhobatch)
+                           if self.target == "midi" then
+                          		target = data[i].binVector:t():float():split(rhobatch)
+                      	  else
+                      	  	target = data[i].binVector:t():float():split(rhobatch)
+                      	  end--]]
+                      	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
                             input = {inputs[testl]}
@@ -129,18 +156,18 @@ trainer:train()
            epoch = epoch + 1
 end
 
-trainer:test()
+function trainer:test()
 
 end
 
 
-trainer:validate()
+function trainer:validate()
 
 end
 
 
 -- This is where our for loops will occur --
-trainer:evaluate()
+function trainer:evaluate()
 
 end
 
