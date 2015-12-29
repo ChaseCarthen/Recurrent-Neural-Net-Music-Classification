@@ -127,9 +127,10 @@ train = trainer{epochLimit = 200, model = model, datasetLoader = dl, optimModule
 
 while not train:done() do
     print("Epoch: ", train.epoch)
-    --test()
+    --train:test()
+    train:validate()
     --train()
-    train:train()
+    --train:train()
     if train.epoch % 40 == 0 then
         --test()
     end

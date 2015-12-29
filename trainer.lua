@@ -39,7 +39,7 @@ function trainer:__init(args)
 	end
 
 	self.dataSplit = args.dataSplit or 10000
-
+	self.sequenceSplit = 1000 or args.sequenceSplit
 	-- What is our target and input..
 	self.target = args.target
 	self.input = args.input
@@ -55,8 +55,7 @@ end
 function trainer:splitData(data)
 	local input = nil
 	local target = nil
-	--print(data.midi:size())
-	--print(data.audio:size())
+
 	if self.target == "midi" then
 		target = data.midi:float():split(self.dataSplit)	
 	else
@@ -68,7 +67,6 @@ function trainer:splitData(data)
 	else
 		input = data.audio:float():split(self.dataSplit)
 	end
-
 	return input,target
 end
 
@@ -122,11 +120,21 @@ function trainer:train()
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
-                            input = {inputs[testl]}
+                            input = inputs[testl]:split(self.sequenceSplit)
+                            t = target[testl]:split(self.sequenceSplit)
+                            if testl == #inputs then
+                            	if t[#t]:size(1) ~= self.sequenceSplit then
+                            		t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
+                            		input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+                            		
+                            	end
+                            end
+
+                            
                            local output = self.model:forward(input)
 
                            out[testl] = output[1]:clone()
-                          local err = self.model:backward(input,output,{target[testl]})--inputs)
+                          local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
                           
                           count = count + 1
@@ -134,7 +142,7 @@ function trainer:train()
                          end
 
                         if self.epoch % 5 == 0 and count % 4 == 0 then
-                            torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)
+                            torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
                             
                         end  
                             
@@ -152,12 +160,12 @@ function trainer:train()
 
    end -- End of while loop
 
-          print(loss/count)
-           print(confusion)
+   print(loss/count)
+   --print(confusion)
 
-           -- next epoch
-           confusion:zero()
-           self.epoch = self.epoch + 1
+   -- next epoch
+   --confusion:zero()
+   self.epoch = self.epoch + 1
 end
 
 function trainer:done()
@@ -165,12 +173,132 @@ function trainer:done()
 end
 
 function trainer:test()
+   -- epoch tracker
+   self.epoch = self.epoch or 1
+
+   -- local vars
+   local time = sys.clock()
+
+   -- set model to training mode (for modules that differ in training and testing, like Dropout)
+   self.model:test()
+   self.datasetLoader:loadTesting()
+   numTest = self.datasetLoader:numberOfTestSamples()
+   shuffle = torch.randperm(numTest)
+   done = false
+   local loss = 0
+   count = 0
+   while not done do
+    data = self.datasetLoader:loadNextSet()
+    collectgarbage();
+   	done = data.done
+
+
+	-- evaluate function for complete mini batch
+	for i = 1,#data do
+		xlua.progress(i, #data)
+
+		inputs,target = self:splitData(data[i])
+
+        local out = {}
+        for testl = 1,#inputs do
+        	input = inputs[testl]:split(self.sequenceSplit)
+            t = target[testl]:split(self.sequenceSplit)
+
+            if testl == #inputs then
+            	if t[#t]:size(1) ~= self.sequenceSplit then
+                	t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
+                    input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+                            		
+                end
+            end
+
+                            
+			local output = self.model:forward(input)
+
+        	out[testl] = output[1]:clone()
+        	local err = self.model:backward(input,output,t)--inputs)
+        	loss = loss + err
+                          
+        	count = count + 1
+      
+        end
+
+        if self.epoch % 5 == 0 and count % 4 == 0 then
+        	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
+        end
+    end  
+                            
+	end -- End of while loop
+
+	print(loss/count)
+	--print(confusion)
+	return loss/count
 
 end
 
 
 function trainer:validate()
+	torch.save("test.model",self.model)
+   -- epoch tracker
+   self.epoch = self.epoch or 1
 
+   -- local vars
+   local time = sys.clock()
+
+   -- set model to training mode (for modules that differ in training and testing, like Dropout)
+   self.model:test()
+   self.datasetLoader:loadValidation()
+   numValidation = self.datasetLoader:numberOfValidSamples()
+   shuffle = torch.randperm(numValidation)
+   done = false
+   local loss = 0
+   count = 0
+   while not done do
+    data = self.datasetLoader:loadNextSet()
+    collectgarbage();
+   	done = data.done
+
+
+	-- evaluate function for complete mini batch
+	for i = 1,#data do
+		xlua.progress(i, #data)
+
+		inputs,target = self:splitData(data[i])
+
+        local out = {}
+        for testl = 1,#inputs do
+        	input = inputs[testl]:split(self.sequenceSplit)
+            t = target[testl]:split(self.sequenceSplit)
+
+            if testl == #inputs then
+            	if t[#t]:size(1) ~= self.sequenceSplit then
+                	t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
+                    input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+                            		
+                end
+            end
+
+                            
+			local output = self.model:forward(input)
+
+        	out[testl] = output[1]:clone()
+        	local err = self.model:backward(input,output,t)--inputs)
+        	loss = loss + err
+                          
+        	count = count + 1
+      
+        end
+
+        if self.epoch % 5 == 0 and count % 4 == 0 then
+        	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
+        end
+    end  
+                            
+	end -- End of while loop
+
+	print(loss/count)
+	--print(confusion)s
+	return loss/count
 end
 
 
