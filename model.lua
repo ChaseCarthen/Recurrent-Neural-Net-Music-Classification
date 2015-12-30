@@ -30,6 +30,9 @@ function model:clear()
 	print ("I do nothing just a stub overwrite me")
 end
 
+function model:setCriterion(criterion)
+  self.criterion = criterion
+end
 
 function model:setup()
 	print ("I do nothing just a stub overwrite me")
@@ -58,4 +61,9 @@ function model:load(filename)
 	if filename ~= nil then
 		self.model = torch.load(filename)
 	end
+end
+
+function model:floattize()
+	self.model = self.prevmodel
+	self.model = self.model:float()
 end

@@ -50,6 +50,12 @@ function trainer:__init(args)
 	-- enable graphing --
 	self.graphing = args.graphing or false
 	self.epoch = 1
+	self.join = nn.JoinTable(1)
+	print (args.serialize)
+	self.serialize = false or args.serialize
+	self.frequency = args.frequency or 10
+	self.epochrecord = args.epochrecord or 50
+	self.modelfile = args.modelfile or "train.model"
 end
 
 function trainer:splitData(data)
@@ -132,18 +138,18 @@ function trainer:train()
 
                             
                            local output = self.model:forward(input)
-
-                           out[testl] = output[1]:clone()
+                           if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
+                           	out[testl] = self.join:forward(output):clone()
+                       	   end
                           local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
+                           
                           
-                          count = count + 1
       
                          end
-
-                        if self.epoch % 5 == 0 and count % 4 == 0 then
+                         count = count + 1
+                        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                             torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
-                            
                         end  
                             
                         out = nil
@@ -214,8 +220,9 @@ function trainer:test()
 
                             
 			local output = self.model:forward(input)
-
-        	out[testl] = output[1]:clone()
+			if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
+        		out[testl] = self.join:forward(output)
+        	end
         	local err = self.model:backward(input,output,t)--inputs)
         	loss = loss + err
                           
@@ -223,7 +230,7 @@ function trainer:test()
       
         end
 
-        if self.epoch % 5 == 0 and count % 4 == 0 then
+        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
         	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
         end
     end  
@@ -280,8 +287,9 @@ function trainer:validate()
 
                             
 			local output = self.model:forward(input)
-
-        	out[testl] = output[1]:clone()
+			if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
+        		out[testl] = self.join:forward(output)
+        	end
         	local err = self.model:backward(input,output,t)--inputs)
         	loss = loss + err
                           
@@ -289,7 +297,7 @@ function trainer:validate()
       
         end
 
-        if self.epoch % 5 == 0 and count % 4 == 0 then
+        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
         	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
         end
     end  
@@ -307,3 +315,6 @@ function trainer:evaluate()
 
 end
 
+function trainer:saveModel()
+	torch.save(self.modelfile,self.model)
+end

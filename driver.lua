@@ -14,6 +14,7 @@ require 'nn'
 require 'model'
 require 'writeMidi'
 require 'trainer'
+torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
 cmd:text()
@@ -22,6 +23,11 @@ cmd:text()
 cmd:text('Options')
 cmd:option("--cuda",false,"Use cuda")
 cmd:option("-data","processed","Specify the directory with data.")
+cmd:option("--serialize",false,"Serialize outputs")
+cmd:option("-epochrecord", 50, "Every nth epoch to serialize data.")
+cmd:option("-frequency",10,"Every jth dataset is used to be serialized")
+cmd:option("-modelfile","train.model","What you wish to save this model as!")
+cmd:option("-savemodel", 4, "Every nth epoch you save the model used by this driver.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -123,16 +129,18 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = trainer{epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio"}
+train = trainer{epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
 
 while not train:done() do
     print("Epoch: ", train.epoch)
     --train:test()
-    train:validate()
+    --train:validate()
     --train()
-    --train:train()
-    if train.epoch % 40 == 0 then
+    train:saveModel()
+    train:train()
+    if train.epoch % params.savemodel == 0 then
         --test()
+        train:saveModel()
     end
 end
 

@@ -20,6 +20,7 @@ end
 
 function RNNC:cudaify(string)
   self.model:cuda()
+  self.prevmodel = self.model
   local model = nn.Sequential()
   model:add(nn.Sequencer(nn.Copy(string, 'torch.CudaTensor')))
   model:add(self.model)
@@ -73,7 +74,9 @@ end
 
 function RNNC:backward(input,output,targets)
   --print (output)
-  local err = self.criterion:forward(output, targets) 
+
+  local err = self.criterion:forward(output, targets)
+
   if self.mode ~= "test" then    
     local df_do = self.criterion:backward(output, targets)        
     self.model:backward(input, df_do)
