@@ -323,7 +323,7 @@ function generateWav(filename,directory)
 
   if not paths.filep('"' .. directory .. filebase .. ".wav" .. '"') then
     --print('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
-    sys.execute('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22k -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
+    sys.execute('timidity ' .. '"' .. filename .. '"' .. " --output-mono -s 22050 -Ow -o " .. '"' .. directory .. filebase .. ".wav" .. '"')
   end
 
 end

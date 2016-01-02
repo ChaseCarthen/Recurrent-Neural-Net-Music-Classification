@@ -14,6 +14,7 @@ require 'nn'
 require 'model'
 require 'writeMidi'
 require 'trainer'
+require 'AutoEncoder'
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
@@ -28,6 +29,13 @@ cmd:option("-epochrecord", 50, "Every nth epoch to serialize data.")
 cmd:option("-frequency",10,"Every jth dataset is used to be serialized")
 cmd:option("-modelfile","train.model","What you wish to save this model as!")
 cmd:option("-savemodel", 4, "Every nth epoch you save the model used by this driver.")
+cmd:option("--autoencoder",false,"An option to use an autoencoder")
+cmd:option("--rnnc",false,"An option to use rnnc model.")
+cmd:option("-target","midi","What will be this models target.")
+cmd:option("-input","audio","What will be ths models input.")
+cmd:option("-dataSplit",20000,"How much data will be split up into sequences be split up.")
+cmd:option("-sequenceSplit",5000,"How much a sequence will be split up.")
+
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -67,60 +75,98 @@ dl = DatasetLoader("processed","au","audio")
 classes = dl.classes
 
 
--- This Describes the default model to be generate for classification.
-DefaultModel = function(num_output)
+if params.rnnc then
+  -- This Describes the default model to be generate for classification.
+  DefaultModel = function(num_output)
 
   local model = RNNC() 
 
   mlp=nn.Sequential()
-mlp:add(nn.Linear(32,128))
-mlp:add(nn.Tanh())
+  mlp:add(nn.Linear(32,128))
+  mlp:add(nn.Tanh())
 
-rhobatch = 30000
-rho = 5000
-r2 = nn.Recurrent(
-   128, mlp, 
-   nn.Linear(128, 128), nn.Sigmoid(), 
-   rho
-)
+  rhobatch = 30000
+  rho = 5000
 
   mlp2=nn.Sequential()
-mlp2:add(nn.Linear(16,128))
-mlp2:add(nn.Tanh())
+  mlp2:add(nn.Linear(16,128))
+  mlp2:add(nn.Sigmoid())
 
---rhobatch = 10000
---rho = 50
-r3 = nn.Recurrent(
+  --rhobatch = 10000
+  --rho = 50
+  r3 = nn.Recurrent(
    128, mlp2, 
    nn.Linear(128, 128), nn.Sigmoid(), 
    rho
-)
-r2 = nn.Sequencer(r2)
-r3 = nn.Sequencer(r3)
-encoder = nn.Sequential()
-  model:addlayer(nn.Sequencer(nn.FastLSTM(32,128)))
-  model:addlayer(nn.Sequencer(nn.Linear(128,128)))
-  model:addlayer(nn.Sequencer(nn.Sigmoid()))
-  if(cuda) then
+  )
+
+  r3 = nn.Sequencer(r3)
+  model:addlayer(nn.Sequencer(nn.FastLSTM(32,16)))
+  model:addlayer(r3)
+  --model:addlayer(nn.Sequencer(nn.Sigmoid()))
+   if(cuda) then
   	model:cudaify('torch.FloatTensor')       
+   end
+    model:printmodel()
+	 return model
   end
-  model:printmodel()
-	return model
+
+  model = DefaultModel(#classes)
+
+else
+
+  mlp=nn.Sequential()
+  mlp:add(nn.Linear(32,64))
+  mlp:add(nn.Tanh())
+
+  rhobatch = 10000
+  rho = 50
+  r2 = nn.Recurrent(
+    64, mlp, 
+    nn.Linear(64, 64), nn.Tanh(), 
+    rho
+  )
+
+  mlp2=nn.Sequential()
+  mlp2:add(nn.Linear(64,32))
+  mlp2:add(nn.Tanh())
+
+  --rhobatch = 10000
+  --rho = 50
+  r3 = nn.Recurrent(
+  32, mlp2, 
+  nn.Linear(32, 32), nn.Sigmoid(), 
+  ho
+  )
+  r2 = nn.Sequencer(r2)
+  r3 = nn.Sequencer(r3)
+  encoder = nn.Sequential()
+  encoder:add(r2)
+  decoder = nn.Sequential()
+  decoder:add(r3)
+
+  model = AutoEncoder(encoder,decoder)
+  if(cuda) then
+    model:cudaify('torch.FloatTensor')
+  end
+
 end
 
-
-model = DefaultModel(#classes)
 
 
 --Step 3: Defne Our Loss Function
 criterion = nn.SequencerCriterion(nn.BCECriterion())
+
 model:setCriterion(criterion)
 
 confusion = optim.ConfusionMatrix(classes)
 
 model:initParameters()
 
+-- Add a datetime to this output later
+trainLogger = optim.Logger('train.log')
 
+trainLogger:setNames{'training error'}--, 'test error')
 
 optimState = {
     learningRate = 0.003,
@@ -129,7 +175,7 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = trainer{epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
+train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
 
 while not train:done() do
     print("Epoch: ", train.epoch)
@@ -137,7 +183,9 @@ while not train:done() do
     --train:validate()
     --train()
     train:saveModel()
-    train:train()
+    trainLogger:add{train:train()}
+    trainLogger:style{'-'}
+    trainLogger:plot()
     if train.epoch % params.savemodel == 0 then
         --test()
         train:saveModel()

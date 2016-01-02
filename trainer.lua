@@ -38,8 +38,10 @@ function trainer:__init(args)
 		self.optimModule = args.optimModule
 	end
 
-	self.dataSplit = args.dataSplit or 10000
-	self.sequenceSplit = 1000 or args.sequenceSplit
+	self.dataSplit = args.dataSplit or 20000
+	self.sequenceSplit = args.sequenceSplit or 5000
+	print(self.dataSplit)
+	print(self.sequenceSplit)
 	-- What is our target and input..
 	self.target = args.target
 	self.input = args.input
@@ -115,19 +117,13 @@ function trainer:train()
                            for i = 1,#data do
                             xlua.progress(i, #data)
 
-                          --[[  inputs = data[i].data:float():split(rhobatch)
-
-                            inputs[#inputs] = nil
-                           if self.target == "midi" then
-                          		target = data[i].binVector:t():float():split(rhobatch)
-                      	  else
-                      	  	target = data[i].binVector:t():float():split(rhobatch)
-                      	  end--]]
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
                             input = inputs[testl]:split(self.sequenceSplit)
                             t = target[testl]:split(self.sequenceSplit)
+
+                            -- Making sure the last split has the proper size for passing into a sequencer element.
                             if testl == #inputs then
                             	if t[#t]:size(1) ~= self.sequenceSplit then
                             		t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
@@ -172,10 +168,12 @@ function trainer:train()
    -- next epoch
    --confusion:zero()
    self.epoch = self.epoch + 1
+
+   return (loss/count)
 end
 
 function trainer:done()
-	return self.epoch == self.epochLimit
+	return self.epoch > self.epochLimit
 end
 
 function trainer:test()

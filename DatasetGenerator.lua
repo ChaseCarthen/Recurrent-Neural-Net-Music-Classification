@@ -76,11 +76,11 @@ if directory ~= nil then
         if not params.spectrogram then
             -- Call midi function
             ad:loadAudioMidi(nil,wavpath)
-            ad:generateImage()
+            --ad:generateImage()
         else
             -- Load spectrogram representation
             ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
-            ad:generateImage()
+            --ad:generateImage()
         end
         print(ad.file .. "DONE")
         -- decide which path to place it
