@@ -26,8 +26,10 @@ classlist = {}
 classindex = 1
 if directory ~= nil then
   -- Search through directory for files
+  audiolist = {}
   paths.mkdir(paths.concat(paths.cwd(),params.o))
   file = torch.DiskFile(paths.concat(paths.cwd(),params.o,"class.txt"),'w')
+  counter = 0
   for dir in paths.iterdirs(directory) do
     classlist[classindex] = directory
     classindex = classindex + 1
@@ -46,8 +48,8 @@ if directory ~= nil then
     paths.mkdir(validpath)
     paths.mkdir(testpath)
     paths.mkdir(wavpath)
-    audiolist = {}
-    counter = 0
+    
+    
     for file in paths.iterfiles(paths.concat(directory,dir)) do
         print(file)
         if not params.spectrogram then
@@ -68,7 +70,15 @@ if directory ~= nil then
     testcounter = 0
     validcounter = 0
     audiolistcount = #audiolist
+
     -- This needs to get randomized
+
+  end
+
+    print (#audiolist)
+    print(numTrain)
+    print(numTest)
+    print(numValidation)
     while #audiolist > 0 do
         ad = audiolist[#audiolist]
         audiolist[#audiolist] = nil
@@ -96,6 +106,4 @@ if directory ~= nil then
         end
         collectgarbage()
     end
-
   end
-end

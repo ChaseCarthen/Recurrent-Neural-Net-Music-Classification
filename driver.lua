@@ -175,7 +175,7 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.rmsprop, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
+train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.adadelta, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
 
 while not train:done() do
     print("Epoch: ", train.epoch)
@@ -185,7 +185,7 @@ while not train:done() do
     train:saveModel()
     trainLogger:add{train:train()}
     trainLogger:style{'-'}
-    trainLogger:plot()
+    --trainLogger:plot()
     if train.epoch % params.savemodel == 0 then
         --test()
         train:saveModel()

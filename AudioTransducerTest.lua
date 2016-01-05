@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('./processed/train/albatross_hds.dat')
+data = torch.load('/cse/home/chase/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/AmericanBeautyRag.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
@@ -28,17 +28,18 @@ data2 = data.audio:float():split(10000)
 out = {}
 for i = 1,#data2 do
 	out[i] = model:forward({data2[i]})[1]:clone()
-	print(out[i]:mean())
+	print(out[i]:max())
 	print(out[i]:size())
+  image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=data2[i]},1000,1000))
 end
 
 
 
-out = join:forward(out):clone()
-gnuplot.hist(out)
+--out = join:forward(out):clone()
+--gnuplot.hist(out)
 --out = out:round()
 --print(out:max())
---image.save('test.pgm',image.scale(out*50,1000,1000))
+
 --print("done test")
 --image.save('test2.pgm',image.scale(image.minmax{tensor=data.audio},1000,1000))
 --print("done test2")
