@@ -28,15 +28,17 @@ data2 = data.audio:float():split(10000)
 out = {}
 for i = 1,#data2 do
 	out[i] = model:forward({data2[i]})[1]:clone()
-	print(out[i]:max())
+	print(out[i]:min())
 	print(out[i]:size())
-  image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=data2[i]},1000,1000))
+       image.save('test' .. i .. '.pgm',image.scale(out[i]:ge(.3),1000,1000))
 end
 
 
 
 --out = join:forward(out):clone()
 --gnuplot.hist(out)
+--print( (out:ge(.3) ):sum())
+--print(data.midi:sum())
 --out = out:round()
 --print(out:max())
 

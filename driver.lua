@@ -35,7 +35,7 @@ cmd:option("-target","midi","What will be this models target.")
 cmd:option("-input","audio","What will be ths models input.")
 cmd:option("-dataSplit",20000,"How much data will be split up into sequences be split up.")
 cmd:option("-sequenceSplit",5000,"How much a sequence will be split up.")
-
+cmd:option("epochLimit",200,"How many epochs to run for.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -63,8 +63,6 @@ end
 local math = require 'math'
 
 
-
-
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 trainData = {}
 testData = {}
@@ -75,7 +73,7 @@ dl = DatasetLoader("processed","au","audio")
 classes = dl.classes
 
 
-if params.rnnc then
+if params.rnnc and params.input == "audio" then
   -- This Describes the default model to be generate for classification.
   DefaultModel = function(num_output)
 
@@ -113,8 +111,8 @@ if params.rnnc then
 
   model = DefaultModel(#classes)
 
-else
-
+elseif params.autoencoder and params.input == "audio" then
+  params.target = params.input
   mlp=nn.Sequential()
   mlp:add(nn.Linear(32,64))
   mlp:add(nn.Tanh())
@@ -123,7 +121,7 @@ else
   rho = 50
   r2 = nn.Recurrent(
     64, mlp, 
-    nn.Linear(64, 64), nn.Tanh(), 
+    nn.Linear(64, 64), nn.LogSigmoid(), 
     rho
   )
 
@@ -136,7 +134,44 @@ else
   r3 = nn.Recurrent(
   32, mlp2, 
   nn.Linear(32, 32), nn.Sigmoid(), 
-  ho
+  rho
+  )
+  r2 = nn.Sequencer(r2)
+  r3 = nn.Sequencer(r3)
+  encoder = nn.Sequential()
+  encoder:add(r2)
+  decoder = nn.Sequential()
+  decoder:add(r3)
+
+  model = AutoEncoder(encoder,decoder)
+  if(cuda) then
+    model:cudaify('torch.FloatTensor')
+  end
+
+elseif params.autoencoder and params.input == "midi" then
+  params.target = params.input
+  mlp=nn.Sequential()
+  mlp:add(nn.Linear(128,64))
+  mlp:add(nn.Tanh())
+
+  rhobatch = 10000
+  rho = 50
+  r2 = nn.Recurrent(
+    64, mlp, 
+    nn.Linear(64, 64), nn.LogSigmoid(), 
+    rho
+  )
+
+  mlp2=nn.Sequential()
+  mlp2:add(nn.Linear(64,128))
+  mlp2:add(nn.Tanh())
+
+  --rhobatch = 10000
+  --rho = 50
+  r3 = nn.Recurrent(
+  128, mlp2, 
+  nn.Linear(128, 128), nn.Sigmoid(), 
+  rho
   )
   r2 = nn.Sequencer(r2)
   r3 = nn.Sequencer(r3)
@@ -175,7 +210,10 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = 200, model = model, datasetLoader = dl, optimModule = optim.adadelta, optimState = optimState, target = "midi",input = "audio",serialize = params.serialize,epochrecord = params.epochrecord, frequency = params.frequency, modelfile = params.modelfile}
+train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
+optimModule = optim.adadelta, optimState = optimState, target = params.target,input = params.input,
+serialize = params.serialize,epochrecord = params.epochrecord,
+frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit}
 
 while not train:done() do
     print("Epoch: ", train.epoch)
