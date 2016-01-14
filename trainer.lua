@@ -89,6 +89,7 @@ function trainer:train()
    -- set model to training mode (for modules that differ in training and testing, like Dropout)
    self.model:train()
    self.datasetLoader:loadTraining()
+
    numTrain = self.datasetLoader:numberOfTrainingSamples() 
    shuffle = torch.randperm(numTrain)
    done = false
@@ -120,6 +121,9 @@ function trainer:train()
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
+                           	if testl % 10 == 0 then
+                           		--self.model:forget()
+                           	end
                             input = inputs[testl]:split(self.sequenceSplit)
                             t = target[testl]:split(self.sequenceSplit)
 
@@ -134,6 +138,9 @@ function trainer:train()
 
                             
                            local output = self.model:forward(input)
+                           for os = 1,#output do
+                           		output[os]:round()
+                           end
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                            	out[testl] = self.join:forward(output):clone()
                        	   end
@@ -144,6 +151,7 @@ function trainer:train()
       
                          end
                          count = count + 1
+                         
                         if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                             torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
                         end  

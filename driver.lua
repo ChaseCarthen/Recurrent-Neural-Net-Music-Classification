@@ -87,8 +87,8 @@ if params.rnnc and params.input == "audio" then
   rho = 5000
 
   mlp2=nn.Sequential()
-  mlp2:add(nn.Linear(16,128))
-  mlp2:add(nn.Sigmoid())
+  mlp2:add(nn.Linear(80,128))
+  mlp2:add(nn.ReLU())
 
   --rhobatch = 10000
   --rho = 50
@@ -100,6 +100,8 @@ if params.rnnc and params.input == "audio" then
 
   r3 = nn.Sequencer(r3)
   model:addlayer(nn.Sequencer(nn.FastLSTM(32,16)))
+  model:addlayer(nn.Sequencer(nn.GRU(16,20)))
+  model:addlayer(nn.Sequencer(nn.GRU(20,80)))
   model:addlayer(r3)
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
@@ -110,7 +112,7 @@ if params.rnnc and params.input == "audio" then
   end
 
   model = DefaultModel(#classes)
-
+  --model:remember('both')
 elseif params.autoencoder and params.input == "audio" then
   params.target = params.input
   mlp=nn.Sequential()
@@ -190,7 +192,7 @@ end
 
 
 --Step 3: Defne Our Loss Function
-criterion = nn.SequencerCriterion(nn.BCECriterion())
+criterion = nn.SequencerCriterion(nn.BCECriterion(nil,false))
 
 model:setCriterion(criterion)
 

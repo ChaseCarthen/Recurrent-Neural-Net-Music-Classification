@@ -67,3 +67,11 @@ function model:floattize()
 	self.model = self.prevmodel
 	self.model = self.model:float()
 end
+
+function model:remember(string)
+	self.model:remember(string)
+end
+
+function model:forget()
+	self.model:forget()
+end
