@@ -131,19 +131,21 @@ if params.rnnc and params.input == "audio" then
   attention:add(nn.SelectTable(-1))
 
 
+
   reward = nn.Sequential()
   reward:add(nn.Constant(1,1))
 
-
   concat = nn.ConcatTable():add(nn.Identity()):add(reward)
   concat2 = nn.ConcatTable():add(nn.Identity()):add(concat)
-  attention:add(concat2)
+
+  --attention:add(concat2)
   model = RNNC()
   model:setModel(nn.Sequencer(attention))
 
    if(cuda) then
     model:cudaify('torch.FloatTensor')       
    end
+   model:addlayer(nn.Sequencer(concat2))
   --model:remember('both')
 elseif params.autoencoder and params.input == "audio" then
   params.target = params.input
@@ -225,7 +227,7 @@ end
 
 
 --Step 3: Defne Our Loss Function
---criterion = nn.BCECriterion(nil,false)
+--criterion = nn.SequencerCriterion(nn.BCECriterion(nil,false))
 criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
       :add(nn.ModuleCriterion(nn.BinaryClassReward(attention), nil, nn.Convert())) -- REINFORCE

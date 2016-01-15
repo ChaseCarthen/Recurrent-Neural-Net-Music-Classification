@@ -137,9 +137,9 @@ function trainer:train()
                             	end
                             end
 
-                           print(type(input))
+                           --print(type(input))
                            local output = self.model:forward(input)
-
+                           --print(output)
                            for os = 1,#output do
                               --output[os] = output[os][1]
                               if type(output[os]) == 'table' then
