@@ -10,11 +10,12 @@ require 'math'
 require 'torch'
 require 'rnn'
 require 'image'
-require 'nn'
+require 'dpnn'
 require 'model'
 require 'writeMidi'
 require 'trainer'
 require 'AutoEncoder'
+require 'BinaryClassReward'
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
@@ -87,8 +88,8 @@ if params.rnnc and params.input == "audio" then
   rho = 5000
 
   mlp2=nn.Sequential()
-  mlp2:add(nn.Linear(80,128))
-  mlp2:add(nn.ReLU())
+  mlp2:add(nn.Linear(256,128))
+  mlp2:add(nn.RReLU())
 
   --rhobatch = 10000
   --rho = 50
@@ -99,9 +100,8 @@ if params.rnnc and params.input == "audio" then
   )
 
   r3 = nn.Sequencer(r3)
-  model:addlayer(nn.Sequencer(nn.FastLSTM(32,16)))
-  model:addlayer(nn.Sequencer(nn.GRU(16,20)))
-  model:addlayer(nn.Sequencer(nn.GRU(20,80)))
+  model:addlayer(nn.Sequencer(nn.FastLSTM(32,256)))
+  --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
   model:addlayer(r3)
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
@@ -111,7 +111,39 @@ if params.rnnc and params.input == "audio" then
 	 return model
   end
 
-  model = DefaultModel(#classes)
+  --model = DefaultModel(#classes)
+
+
+
+
+  action = nn.Sequential()
+  action:add(nn.Linear(128,128))
+  action:add(nn.ReinforceBernoulli(true))
+
+  locationSensor = nn.Sequential()
+  locationSensor:add(nn.ParallelTable():add(nn.LSTM(32,40)):add(nn.Linear(128,40))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.JoinTable(1,1))
+  locationSensor:add(nn.LSTM(80,128))
+  locationSensor:add(nn.Sigmoid())
+
+  attention = nn.Sequential()
+  attention:add(nn.RecurrentAttention(locationSensor,action,1,{128}) )
+  attention:add(nn.SelectTable(-1))
+
+
+  reward = nn.Sequential()
+  reward:add(nn.Constant(1,1))
+
+
+  concat = nn.ConcatTable():add(nn.Identity()):add(reward)
+  concat2 = nn.ConcatTable():add(nn.Identity()):add(concat)
+  attention:add(concat2)
+  model = RNNC()
+  model:setModel(nn.Sequencer(attention))
+
+   if(cuda) then
+    model:cudaify('torch.FloatTensor')       
+   end
   --model:remember('both')
 elseif params.autoencoder and params.input == "audio" then
   params.target = params.input
@@ -123,7 +155,7 @@ elseif params.autoencoder and params.input == "audio" then
   rho = 50
   r2 = nn.Recurrent(
     64, mlp, 
-    nn.Linear(64, 64), nn.LogSigmoid(), 
+    nn.Linear(64, 64), nn.Sigmoid(), 
     rho
   )
 
@@ -148,6 +180,7 @@ elseif params.autoencoder and params.input == "audio" then
   model = AutoEncoder(encoder,decoder)
   if(cuda) then
     model:cudaify('torch.FloatTensor')
+    print("DONE")
   end
 
 elseif params.autoencoder and params.input == "midi" then
@@ -160,7 +193,7 @@ elseif params.autoencoder and params.input == "midi" then
   rho = 50
   r2 = nn.Recurrent(
     64, mlp, 
-    nn.Linear(64, 64), nn.LogSigmoid(), 
+    nn.Linear(64, 64), nn.Sigmoid(), 
     rho
   )
 
@@ -192,7 +225,13 @@ end
 
 
 --Step 3: Defne Our Loss Function
-criterion = nn.SequencerCriterion(nn.BCECriterion(nil,false))
+--criterion = nn.BCECriterion(nil,false)
+criterion = nn.ParallelCriterion(true)
+      :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
+      :add(nn.ModuleCriterion(nn.BinaryClassReward(attention), nil, nn.Convert())) -- REINFORCE
+
+--criterion = nn.SequencerCriterion(criterion)
+
 
 model:setCriterion(criterion)
 
@@ -213,7 +252,7 @@ optimState = {
   }
 
 train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
-optimModule = optim.adadelta, optimState = optimState, target = params.target,input = params.input,
+optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit}
 

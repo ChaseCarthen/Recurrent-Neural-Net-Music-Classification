@@ -108,6 +108,7 @@ function trainer:train()
                               print (x)
                               self.model:getParameters():copy(x)
                            end
+                           --print (self.model)
                            -- reset gradients
                            self.model:getGradParameters():zero()
 
@@ -136,14 +137,21 @@ function trainer:train()
                             	end
                             end
 
-                            
+                           print(type(input))
                            local output = self.model:forward(input)
+
                            for os = 1,#output do
-                           		output[os]:round()
+                              --output[os] = output[os][1]
+                              if type(output[os]) == 'table' then
+                           		   output[os][1]:round()
+                              else
+                                 output[os]:round()
+                              end
                            end
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                            	out[testl] = self.join:forward(output):clone()
                        	   end
+                           --print(testl)
                           local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
                            

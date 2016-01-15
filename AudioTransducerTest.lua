@@ -31,7 +31,7 @@ for i = 1,#data2 do
 	print(data2[i]:size())
 	--model:forget()
 	out[i] = model:forward({data2[i]})[1]:clone()
-	print(out[i]:min())
+	print(out[i]:max())
 	print(out[i]:size())
 
        image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=out[i]:round()},1000,1000))

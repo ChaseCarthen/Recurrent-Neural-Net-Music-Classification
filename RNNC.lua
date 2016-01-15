@@ -1,6 +1,7 @@
 require 'model'
 require 'rnn'
 require 'nn'
+require 'BinaryClassReward'
 local RNNC = torch.class ("RNNC","model")
 
 function RNNC:__init()
@@ -28,6 +29,10 @@ function RNNC:cudaify(string)
   self.model = model
 end
 
+function RNNC:setModel(model)
+  self.model = model
+end
+
 function RNNC:initParameters()
   if self.model then
     self.parameters,self.gradParameters = self.model:getParameters()
@@ -35,7 +40,10 @@ function RNNC:initParameters()
 end
 
 function RNNC:getGradParameters()
-  --print ("grad parameters")
+  print ("grad parameters")
+  --print(self.gradParameters)
+  --print(self.parameters)
+  --print(self.model)
   return self.gradParameters
 end
 
@@ -74,13 +82,14 @@ end
 
 function RNNC:backward(input,output,targets)
   --print (output)
+  local err = 0
+  for i = 1, #output do
+    err = err + self.criterion:forward(output[i], targets[i])
 
-  local err = self.criterion:forward(output, targets)
-
-  if self.mode ~= "test" then    
-    local df_do = self.criterion:backward(output, targets)        
-    self.model:backward(input, df_do)
+    if self.mode ~= "test" then
+      local df_do = self.criterion:backward(output[i], targets[i])        
+      --self.model:backward(input[i], df_do)
+    end
   end
-
   return err
 end

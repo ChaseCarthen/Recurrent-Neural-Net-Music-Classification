@@ -24,59 +24,65 @@ end
 function BinaryClassReward:updateOutput(input, target)
    assert(torch.type(input) == 'table')
    local input = self:toBatch(input[1], 1)
+   local target = self:toBatch(target, 1)
+
+   assert(input:size():size() == 2)
    self._maxVal = self._maxVal or input.new()
    self._maxIdx = self._maxIdx or torch.type(input) == 'torch.CudaTensor' and input.new() or torch.LongTensor()
    
    input = input:clone()
    input = input:round()
-   self._reward = 1.0 - math.abs(( (target - input):sum()) / (target:size(1)))
-   print(self._reward)
-   if self._reward < 0 then
-      self._reward = 0
+   self._reward = input.new():resize(input:size(1),1)
+
+   for i=1,input:size(1) do
+      self._reward[i] = 1.0 - math.abs(( (target[i] - input[i]):sum()) / (target[i]:size(1)))
    end
+
    self._target = target
-   self._reward = torch.Tensor({self._reward})
+   --self._reward = torch.Tensor({self._reward})
    -- reward = scale when correctly classified
-   self.reward = self.reward or input.new()
-   self.reward:resize(1):copy(self._reward)
+   self.reward = self._reward:clone()--self.reward or input.new()
+   --self.reward:resize(1):copy(self._reward)
    self.reward:mul(self.scale)
-   print(self.scale)
+
    -- loss = -sum(reward)
-   self.output = -self.reward:sum()
+   self.output = -self.reward
    if self.sizeAverage then
-      self.output = self.output/input:size(1)
+      self.output = self.output/input:size(2)
    end
-   return self.output
+   return self.output:sum()
 end
 
 function BinaryClassReward:updateGradInput(inputTable, target)
    local input = self:toBatch(inputTable[1], 1)
    local baseline = self:toBatch(inputTable[2], 1)
-   print(input)
-   print("input")
+
    -- reduce variance of reward using baseline
    self.vrReward = self.vrReward or self.reward.new()
    self.vrReward:resizeAs(self.reward):copy(self.reward)
    self.vrReward:add(-1, baseline)
    if self.sizeAverage then
-      self.vrReward:div(input:size(1))
+      self.vrReward:div(input:size(2))
    end
 
    -- broadcast reward to modules
-   self.module:reinforce(self.vrReward)  
+   for i = 1, self.vrReward:size(1) do
+      self.module:reinforce(self.vrReward[i])
+   end  
    
-   print(self.gradInput)
+
 
    -- zero gradInput (this criterion has no gradInput for class pred)
+   --print("BAKA")
+   --print(self.gradInput)
    self.gradInput[1]:resizeAs(input):zero()
-   print(self.gradInput)
-   print(baseline)
-   print(self.reward)
    self.gradInput[1] = self:fromBatch(self.gradInput[1], 1)
    
    -- learn the baseline reward
    self.gradInput[2] = self.criterion:backward(baseline, self.reward)
    self.gradInput[2] = self:fromBatch(self.gradInput[2], 1)
+
+
    return self.gradInput
 end
 
