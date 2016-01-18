@@ -24,17 +24,20 @@ join = nn.JoinTable(1)
 
 model = torch.load('./train.model')
 
-data2 = data.audio:float():split(10000)
+data2 = data.audio:float():split(20000)
+data3 = data.midi:float():split(20000)
 out = {}
 
 for i = 1,#data2 do
 	print(data2[i]:size())
+  --print(model:forward({data2[i]}))
 	--model:forget()
-	out[i] = model:forward({data2[i]})[1]:clone()
+	out[i] = model:forward({data2[i]})[1][1]:clone()
 	print(out[i]:max())
 	print(out[i]:size())
 
        image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=out[i]:round()},1000,1000))
+       image.save('testor' .. i .. '.pgm',image.scale(image.minmax{tensor=data3[i]},1000,1000) )
 end
 
 

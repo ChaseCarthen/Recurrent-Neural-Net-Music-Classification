@@ -22,6 +22,7 @@ function BinaryClassReward:__init(module, scale, criterion)
 end
 
 function BinaryClassReward:updateOutput(input, target)
+   --print("OUTPUT")
    assert(torch.type(input) == 'table')
    local input = self:toBatch(input[1], 1)
    local target = self:toBatch(target, 1)
@@ -32,7 +33,7 @@ function BinaryClassReward:updateOutput(input, target)
    
    input = input:clone()
    input = input:round()
-   self._reward = input.new():resize(input:size(1),1)
+   self._reward = self._maxIdx.new():resize(input:size(1),1)
 
    for i=1,input:size(1) do
       self._reward[i] = 1.0 - math.abs(( (target[i] - input[i]):sum()) / (target[i]:size(1)))
@@ -41,12 +42,14 @@ function BinaryClassReward:updateOutput(input, target)
    self._target = target
    --self._reward = torch.Tensor({self._reward})
    -- reward = scale when correctly classified
-   self.reward = self._reward:clone()--self.reward or input.new()
-   --self.reward:resize(1):copy(self._reward)
+   self.reward = self.reward or input.new()
+   self.reward:resize(self._reward:size(1)):copy(self._reward)
    self.reward:mul(self.scale)
 
    -- loss = -sum(reward)
+
    self.output = -self.reward
+
    if self.sizeAverage then
       self.output = self.output/input:size(2)
    end
@@ -66,24 +69,27 @@ function BinaryClassReward:updateGradInput(inputTable, target)
    end
 
    -- broadcast reward to modules
-   for i = 1, self.vrReward:size(1) do
-      self.module:reinforce(self.vrReward[i])
-   end  
+   -- A Hack
+   self.module:reinforce(self.vrReward:cuda())
+   --for i = 1, self.vrReward:size(1) do
+   --   self.module:reinforce(self.vrReward[i])
+   --end  
    
 
 
    -- zero gradInput (this criterion has no gradInput for class pred)
    --print("BAKA")
    --print(self.gradInput)
-   self.gradInput[1]:resizeAs(input):zero()
-   self.gradInput[1] = self:fromBatch(self.gradInput[1], 1)
+   local gradInput = self.gradInput
+   gradInput[1]:resizeAs(input):zero()
+   gradInput[1] = self:fromBatch(gradInput[1], 1)
    
    -- learn the baseline reward
-   self.gradInput[2] = self.criterion:backward(baseline, self.reward)
-   self.gradInput[2] = self:fromBatch(self.gradInput[2], 1)
+   gradInput[2] = self.criterion:backward(baseline, self.reward)
+   gradInput[2] = self:fromBatch(gradInput[2], 1)
 
 
-   return self.gradInput
+   return gradInput
 end
 
 function BinaryClassReward:type(type)

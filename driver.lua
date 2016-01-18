@@ -112,23 +112,42 @@ if params.rnnc and params.input == "audio" then
   end
 
   --model = DefaultModel(#classes)
+  soft = nn.Sequential()
+  soft:add(nn.Linear(200,100))
+  soft:add(nn.SoftMax())
 
+  soft2 = nn.Sequential()
+  soft2:add(nn.Linear(200,100))
+  soft2:add(nn.SoftMax())
 
+  soft3 = nn.Sequential()
+  soft3:add(nn.Linear(200,100))
+  soft3:add(nn.SoftMax())
+
+  allsoft = nn.Sequential()
+  allsoft:add(nn.ConcatTable():add(soft):add(soft2):add(soft3))
+  allsoft:add(nn.JoinTable(1,1))
+  
 
 
   action = nn.Sequential()
-  action:add(nn.Linear(128,128))
+  action:add(nn.Linear(200,200))
+  action:add(nn.Sigmoid())
   action:add(nn.ReinforceBernoulli(true))
 
   locationSensor = nn.Sequential()
-  locationSensor:add(nn.ParallelTable():add(nn.LSTM(32,40)):add(nn.Linear(128,40))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.ParallelTable():add(nn.Linear(32,100)):add(nn.Linear(200,100))) -- first is the passed dataset and second is the action
   locationSensor:add(nn.JoinTable(1,1))
-  locationSensor:add(nn.LSTM(80,128))
-  locationSensor:add(nn.Sigmoid())
+  locationSensor:add(nn.Tanh())
+  locationSensor:add(nn.FastLSTM(200,200))
+  --locationSensor:add(nn.ReLU())
 
   attention = nn.Sequential()
-  attention:add(nn.RecurrentAttention(locationSensor,action,1,{128}) )
+  attention:add(nn.RecurrentAttention(locationSensor,action,1,{200}) )
   attention:add(nn.SelectTable(-1))
+  attention:add(allsoft)
+  attention:add(nn.GRU(300,128))
+  attention:add(nn.Sigmoid())
 
 
 
@@ -232,7 +251,7 @@ criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
       :add(nn.ModuleCriterion(nn.BinaryClassReward(attention), nil, nn.Convert())) -- REINFORCE
 
---criterion = nn.SequencerCriterion(criterion)
+criterion = nn.SequencerCriterion(criterion)
 
 
 model:setCriterion(criterion)

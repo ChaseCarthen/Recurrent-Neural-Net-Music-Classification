@@ -97,7 +97,7 @@ function trainer:train()
    count = 0
    while not done do
     data = self.datasetLoader:loadNextSet()
-    collectgarbage();
+    
    	done = data.done
 
               -- create closure to evaluate f(X) and df/dX
@@ -122,6 +122,7 @@ function trainer:train()
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
+                            --print(testl)
                            	if testl % 10 == 0 then
                            		--self.model:forget()
                            	end
@@ -151,12 +152,11 @@ function trainer:train()
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                            	out[testl] = self.join:forward(output):clone()
                        	   end
-                           --print(testl)
                           local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
                            
                           
-      
+                        collectgarbage();
                          end
                          count = count + 1
                          
