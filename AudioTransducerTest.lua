@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/027700b_.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/xmas_simple_chords_9.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 

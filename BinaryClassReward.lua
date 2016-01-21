@@ -88,7 +88,6 @@ function BinaryClassReward:updateGradInput(inputTable, target)
    gradInput[2] = self.criterion:backward(baseline, self.reward)
    gradInput[2] = self:fromBatch(gradInput[2], 1)
 
-
    return gradInput
 end
 

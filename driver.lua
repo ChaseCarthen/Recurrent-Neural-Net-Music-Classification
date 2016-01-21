@@ -131,22 +131,23 @@ if params.rnnc and params.input == "audio" then
 
 
   action = nn.Sequential()
-  action:add(nn.Linear(200,200))
+  action:add(nn.Linear(20,20))
   action:add(nn.Sigmoid())
   action:add(nn.ReinforceBernoulli(true))
 
   locationSensor = nn.Sequential()
-  locationSensor:add(nn.ParallelTable():add(nn.Linear(32,100)):add(nn.Linear(200,100))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.ParallelTable():add(nn.Linear(4047,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
   locationSensor:add(nn.JoinTable(1,1))
   locationSensor:add(nn.Tanh())
-  locationSensor:add(nn.FastLSTM(200,200))
+  locationSensor:add(nn.FastLSTM(20,20))
   --locationSensor:add(nn.ReLU())
 
   attention = nn.Sequential()
-  attention:add(nn.RecurrentAttention(locationSensor,action,1,{200}) )
+  attention:add(nn.RecurrentAttention(locationSensor,action,1,{20}) )
   attention:add(nn.SelectTable(-1))
-  attention:add(allsoft)
-  attention:add(nn.GRU(300,128))
+  --attention:add(allsoft)
+  --attention:add(nn.GradientReversal())
+  attention:add(nn.GRU(20,128))
   attention:add(nn.Sigmoid())
 
 

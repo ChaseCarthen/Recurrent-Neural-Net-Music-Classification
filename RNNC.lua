@@ -40,7 +40,7 @@ function RNNC:initParameters()
 end
 
 function RNNC:getGradParameters()
-  print ("grad parameters")
+  --print ("grad parameters")
   --print(self.gradParameters)
   --print(self.parameters)
   --print(self.model)
