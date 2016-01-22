@@ -37,6 +37,8 @@ cmd:option("-input","audio","What will be ths models input.")
 cmd:option("-dataSplit",20000,"How much data will be split up into sequences be split up.")
 cmd:option("-sequenceSplit",5000,"How much a sequence will be split up.")
 cmd:option("epochLimit",200,"How many epochs to run for.")
+cmd:option("--attention",false,"Use an attention model.")
+cmd:option("--predict",false,"Writing a prediction model?")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -69,12 +71,18 @@ trainData = {}
 testData = {}
 classes = {}
 
-dl = DatasetLoader("processed","au","audio")
+if params.autoencoder then
+  params.target = params.input
+end
+
+dl = DatasetLoader("processed",params.input,params.target)
 
 classes = dl.classes
 
-
-if params.rnnc and params.input == "audio" then
+print(params.rnnc)
+print(params.attention)
+print(params.input)
+if params.rnnc and params.input == "audio" and not params.attention then
   -- This Describes the default model to be generate for classification.
   DefaultModel = function(num_output)
 
@@ -111,7 +119,11 @@ if params.rnnc and params.input == "audio" then
 	 return model
   end
 
-  --model = DefaultModel(#classes)
+  model = DefaultModel(#classes)
+
+  elseif params.rnnc and params.attention and params.input == "audio" then
+    print("ATTENTION")
+  params.sequenceSplit = params.dataSplit
   soft = nn.Sequential()
   soft:add(nn.Linear(200,100))
   soft:add(nn.SoftMax())
@@ -195,7 +207,7 @@ elseif params.autoencoder and params.input == "audio" then
   r2 = nn.Sequencer(r2)
   r3 = nn.Sequencer(r3)
   encoder = nn.Sequential()
-  encoder:add(r2)
+  encoder:add(nn.Sequencer(nn.LSTM(32,64)))
   decoder = nn.Sequential()
   decoder:add(r3)
 
@@ -247,11 +259,13 @@ end
 
 
 --Step 3: Defne Our Loss Function
---criterion = nn.SequencerCriterion(nn.BCECriterion(nil,false))
+if params.autoencoder then
+criterion = nn.BCECriterion(nil,false)
+else
 criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
       :add(nn.ModuleCriterion(nn.BinaryClassReward(attention), nil, nn.Convert())) -- REINFORCE
-
+end
 criterion = nn.SequencerCriterion(criterion)
 
 
@@ -276,7 +290,7 @@ optimState = {
 train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
-frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit}
+frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict}
 
 while not train:done() do
     print("Epoch: ", train.epoch)

@@ -57,6 +57,7 @@ function trainer:__init(args)
 	self.serialize = false or args.serialize
 	self.frequency = args.frequency or 10
 	self.epochrecord = args.epochrecord or 50
+  self.predict = args.predict
 	self.modelfile = args.modelfile or "train.model"
 end
 
@@ -65,16 +66,22 @@ function trainer:splitData(data)
 	local target = nil
 
 	if self.target == "midi" then
-		target = data.midi:float():split(self.dataSplit)	
+		target = data.midi:float()
 	else
-		target = data.audio:float():split(self.dataSplit)
+		target = data.audio:float()
 	end
 
 	if self.input == "midi" then
-		input = data.midi:float():split(self.dataSplit)	
+		input = data.midi:float()
 	else
-		input = data.audio:float():split(self.dataSplit)
+		input = data.audio:float()
 	end
+  if self.predict then
+    input = input:sub(1,input:size(1)-1)
+    target = target:sub(2,target:size(1))
+  end
+  input = input:split(self.dataSplit)
+  target = target:split(self.dataSplit)   
 	return input,target
 end
 
@@ -99,7 +106,7 @@ function trainer:train()
     data = self.datasetLoader:loadNextSet()
     
    	done = data.done
-
+    local prevout = nil
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
 
@@ -122,33 +129,48 @@ function trainer:train()
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
+                            if testl == 1 then
+                              prevout = nil
+                            end
                             --print(testl)
                            	if testl % 10 == 0 then
                            		--self.model:forget()
                            	end
                             input = inputs[testl]:split(self.sequenceSplit)
+                            if self.predict and prevout ~= nil then
+                              --print ("here")
+                              input = prevout
+                            end
                             t = target[testl]:split(self.sequenceSplit)
 
                             -- Making sure the last split has the proper size for passing into a sequencer element.
                             if testl == #inputs then
                             	if t[#t]:size(1) ~= self.sequenceSplit then
                             		t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                            		input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
-                            		
+                                if prevout == nil then
+                            		  input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+                            		end
                             	end
                             end
-
+                            if self.predict and #input ~= #t then
+                              for ij = #input,#t,-1 do
+                                input[ij] = nil
+                              end
+                            end
                            --print(type(input))
                            local output = self.model:forward(input)
+                           --print(prevout)
+                           --print(t)
                            --print(output)
                            for os = 1,#output do
-                              --output[os] = output[os][1]
+                              output[os] = output[os]:clone()
                               if type(output[os]) == 'table' then
-                           		   output[os][1]:round()
+                           		   --output[os][1]:round()
                               else
-                                 output[os]:round()
+                                 --output[os]:round()
                               end
                            end
+                           prevout = output
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                            	out[testl] = self.join:forward(output):clone()
                        	   end

@@ -134,7 +134,7 @@ end
 function audiodataset:loadIntoBinaryFormat()
 	self.audio,self.samplerate = audio.load(self.file)
 	
-	self.audio = applyToTensor(self.data:t()[1])
+	self.audio = applyToTensor(self.audio:t()[1])
 	collectgarbage()
 end
 

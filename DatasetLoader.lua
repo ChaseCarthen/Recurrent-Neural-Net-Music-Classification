@@ -4,19 +4,22 @@ require 'audiodataset'
 
 
 -- Function utils
-function loadListData(type,list,start,limit,shufflelist)
+function loadListData(input,target,list,start,limit,shufflelist)
 	local outdata = {}
 	local counter = 1
 	for i=start+1,math.min(start+limit,#list) do
-			if type == "audio" then 
-				-- Load audio
-				--print(list[i])
-				temp = audiodataset()
-				temp:deserialize(list[shufflelist[i]])
+		--print(i)
+		--print(list[shufflelist[i]])
+		temp = audiodataset()
+		temp:deserialize(list[shufflelist[i]])
+			if (temp.audio ~= nil and input == 'audio' and target == 'audio') or 
+				(temp.midi ~= nil and input == 'midi' and target == 'midi') or
+				(temp.audio ~= nil and input == 'audio' and target == 'midi' and temp.midi ~= nil) or
+				(temp.audio ~= nil and input == 'midi' and target == 'audio' and temp.midi ~= nil) then
+
 				outdata[counter] = temp
 				counter = counter + 1
-				--print(temp.data:size())
-				--print(temp.class)
+				--print("loaded")
 			end
 	end
 
@@ -26,7 +29,7 @@ end
 
 local DatasetLoader = torch.class('DatasetLoader')
 
-function DatasetLoader:__init(datadir,format,type)
+function DatasetLoader:__init(datadir,input,target)
 	self.datadir = datadir
 	self.train = {}
 	self.valid = {}
@@ -35,7 +38,8 @@ function DatasetLoader:__init(datadir,format,type)
 	self.traincount = 0
 	self.testcount = 0
 	self.validcount = 0
-	self.type = 'audio'--type
+	self.input = input
+	self.target = target--type
 	file = torch.DiskFile(paths.concat(datadir,"class.txt"))
 	file:quiet()
 	str = " "
@@ -105,19 +109,19 @@ end
 
 function DatasetLoader:loadNextSet()
 	if self.mode == "train" then
-		local out = loadListData(self.type,self.train,self.counter,self.limit,self.shufflelist)
+		local out = loadListData(self.input,self.target,self.train,self.counter,self.limit,self.shufflelist)
 		self.counter = out.counter
 		out["done"] = self.traincount == out.counter
 		return out
 
 	elseif self.mode == "test" then
-		local out = loadListData(self.type,self.test,self.counter,self.limit,self.shufflelist)
+		local out = loadListData(self.input,self.target,self.test,self.counter,self.limit,self.shufflelist)
 		self.counter = out.counter
 		out["done"] = self.testcount == out.counter
 		return out
 
 	elseif self.mode == "validation" then
-		local out = loadListData(self.type,self.valid,self.counter,self.limit,self.shufflelist)
+		local out = loadListData(self.input,self.target,self.valid,self.counter,self.limit,self.shufflelist)
 		self.counter = out.counter
 		out["done"] = self.validcount == out.counter
 		return out
