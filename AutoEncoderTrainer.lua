@@ -4,10 +4,10 @@
 -- This class assumes that it will be given a audiodataset
 require 'xlua'
 require 'optim'
-local trainer = torch.class("trainer")
+local AutoEncoderTrainer = torch.class("AutoEncoderTrainer")
 
 
-function trainer:__init(args)
+function AutoEncoderTrainer:__init(args)
 	if args.epochLimit ~= nil then
 		self.epochLimit = args.epochLimit
 	else
@@ -59,9 +59,11 @@ function trainer:__init(args)
 	self.epochrecord = args.epochrecord or 50
   self.predict = args.predict
 	self.modelfile = args.modelfile or "train.model"
+  self.AutoEncoder = args.AutoEncoder
+  self.layer = 1 -- the current layer 6.... 
 end
 
-function trainer:splitData(data)
+function AutoEncoderTrainer:splitData(data)
 	local input = nil
 	local target = nil
 
@@ -77,15 +79,15 @@ function trainer:splitData(data)
 		input = data.audio:float()
 	end
   if self.predict then
-    input = input:sub(1,input:size(1)-1)
-    target = target:sub(2,target:size(1))
+    input = input:sub(1,40000-1)
+    target = target:sub(2,40000)
   end
   input = input:split(self.dataSplit)
   target = target:split(self.dataSplit)   
 	return input,target
 end
 
-function trainer:train()
+function AutoEncoderTrainer:train()
 
    -- epoch tracker
    self.epoch = self.epoch or 1
@@ -94,10 +96,19 @@ function trainer:train()
    local time = sys.clock()
 
    -- set model to training mode (for modules that differ in training and testing, like Dropout)
-   self.model:train()
+   if self.training then 
    self.datasetLoader:loadTraining()
-
    numTrain = self.datasetLoader:numberOfTrainingSamples() 
+   elseif self.validate then
+    self.datasetLoader:loadValidation()
+    numTrain = self.datasetLoader:numberOfTestSamples()
+   else
+    self.datasetLoader:loadTesting()
+
+    numTrain = self.datasetLoader:numberOfValidSamples()
+   end
+
+   
    shuffle = torch.randperm(numTrain)
    done = false
    loss = 0
@@ -109,36 +120,35 @@ function trainer:train()
     local prevout = nil
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
-
                            -- get new parameters
-                           if x ~= self.model:getParameters() then
+                           if self.training then
+                            if x ~= self.model:getParameters() then
                               print (x)
                               self.model:getParameters():copy(x)
-                           end
-                           --print (self.model)
-                           -- reset gradients
-                           self.model:getGradParameters():zero()
+                            end
+                            --print (self.model)
+                            -- reset gradients
+                            self.model:getGradParameters():zero()
+
+                          end
 
                            -- f is the average of all criterions
                            local f = 0
-
                            -- evaluate function for complete mini batch
                            for i = 1,#data do
+
                             xlua.progress(i, #data)
 
                       	   inputs,target = self:splitData(data[i])
                            local out = {}
                            for testl = 1,#inputs do
+
                             if testl == 1 then
                               prevout = nil
                             end
-                            --print(testl)
-                           	if testl % 10 == 0 then
-                           		--self.model:forget()
-                           	end
+
                             input = inputs[testl]:split(self.sequenceSplit)
                             if self.predict and prevout ~= nil then
-                              --print ("here")
                               input = prevout
                             end
                             t = target[testl]:split(self.sequenceSplit)
@@ -147,7 +157,7 @@ function trainer:train()
                             if testl == #inputs then
                             	if t[#t]:size(1) ~= self.sequenceSplit then
                             		t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                                if prevout == nil then
+                                if self.predict == false or prevout == nil then
                             		  input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
                             		end
                             	end
@@ -157,11 +167,10 @@ function trainer:train()
                                 input[ij] = nil
                               end
                             end
-                           --print(type(input))
-                           local output = self.model:forward(input)
-                           --print(prevout)
+
                            --print(t)
-                           --print(output)
+                           local output = self.model:forward(input)
+
                            for os = 1,#output do
                               output[os] = output[os]:clone()
                               if type(output[os]) == 'table' then
@@ -190,13 +199,22 @@ function trainer:train()
                            end
 
                            -- normalize gradients and f(X)
-                           self.model:getGradParameters():div(count)--#data)
+                           if self.training then
+                            self.model:getGradParameters():div(count)--#data)
+                           end
                             f = f/count--#data
+                            print(count)
+                            return f,self.model:getGradParameters()
 
-                           return f,self.model:getGradParameters()
                 end
-                _,fs2 = self.optimModule(feval, self.model:getParameters(), self.optimState)
-                loss = loss + fs2[1]
+                if self.training then
+                  _,fs2 = self.optimModule(feval, self.model:getParameters(), self.optimState)
+                  loss = loss + fs2[1]
+                else
+                  fs2,_ = feval(nil)
+                  loss = loss + fs2
+                end
+                
 
    end -- End of while loop
 
@@ -210,147 +228,36 @@ function trainer:train()
    return (loss/count)
 end
 
-function trainer:done()
+function AutoEncoderTrainer:done()
 	return self.epoch > self.epochLimit
-end
-
-function trainer:test()
-   -- epoch tracker
-   self.epoch = self.epoch or 1
-
-   -- local vars
-   local time = sys.clock()
-
-   -- set model to training mode (for modules that differ in training and testing, like Dropout)
-   self.model:test()
-   self.datasetLoader:loadTesting()
-   numTest = self.datasetLoader:numberOfTestSamples()
-   shuffle = torch.randperm(numTest)
-   done = false
-   local loss = 0
-   count = 0
-   while not done do
-    data = self.datasetLoader:loadNextSet()
-    collectgarbage();
-   	done = data.done
-
-
-	-- evaluate function for complete mini batch
-	for i = 1,#data do
-		xlua.progress(i, #data)
-
-		inputs,target = self:splitData(data[i])
-
-        local out = {}
-        for testl = 1,#inputs do
-        	input = inputs[testl]:split(self.sequenceSplit)
-            t = target[testl]:split(self.sequenceSplit)
-
-            if testl == #inputs then
-            	if t[#t]:size(1) ~= self.sequenceSplit then
-                	t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                    input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
-                            		
-                end
-            end
-
-                            
-			local output = self.model:forward(input)
-			if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-        		out[testl] = self.join:forward(output)
-        	end
-        	local err = self.model:backward(input,output,t)--inputs)
-        	loss = loss + err
-                          
-        	count = count + 1
-      
-        end
-
-        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-        	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
-        end
-    end  
-                            
-	end -- End of while loop
-
-	print(loss/count)
-	--print(confusion)
-	return loss/count
-
-end
-
-
-function trainer:validate()
-	torch.save("test.model",self.model)
-   -- epoch tracker
-   self.epoch = self.epoch or 1
-
-   -- local vars
-   local time = sys.clock()
-
-   -- set model to training mode (for modules that differ in training and testing, like Dropout)
-   self.model:test()
-   self.datasetLoader:loadValidation()
-   numValidation = self.datasetLoader:numberOfValidSamples()
-   shuffle = torch.randperm(numValidation)
-   done = false
-   local loss = 0
-   count = 0
-   while not done do
-    data = self.datasetLoader:loadNextSet()
-    collectgarbage();
-   	done = data.done
-
-
-	-- evaluate function for complete mini batch
-	for i = 1,#data do
-		xlua.progress(i, #data)
-
-		inputs,target = self:splitData(data[i])
-
-        local out = {}
-        for testl = 1,#inputs do
-        	input = inputs[testl]:split(self.sequenceSplit)
-            t = target[testl]:split(self.sequenceSplit)
-
-            if testl == #inputs then
-            	if t[#t]:size(1) ~= self.sequenceSplit then
-                	t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                    input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
-                            		
-                end
-            end
-
-                            
-			local output = self.model:forward(input)
-			if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-        		out[testl] = self.join:forward(output)
-        	end
-        	local err = self.model:backward(input,output,t)--inputs)
-        	loss = loss + err
-                          
-        	count = count + 1
-      
-        end
-
-        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-        	torch.save("test" .. count .. "epoch" .. self.epoch .. ".dat",out)                    
-        end
-    end  
-                            
-	end -- End of while loop
-
-	print(loss/count)
-	--print(confusion)s
-	return loss/count
 end
 
 
 -- This is where our for loops will occur --
-function trainer:evaluate()
-
+function AutoEncoderTrainer:tester()
+  self.test = true
+  self.training = false
+  self.validate = false
+  self.model:test()
+  return self:train()
 end
 
-function trainer:saveModel()
+function AutoEncoderTrainer:trainer()
+  self.training = true
+  self.test = false
+  self.validate = false
+  self.model:train()
+  return self:train()
+end
+
+function AutoEncoderTrainer:validater()
+  self.model:test()
+  self.test = false
+  self.training = false
+  self.validate = true
+  return self:train()
+end
+
+function AutoEncoderTrainer:saveModel()
 	torch.save(self.modelfile,self.model)
 end

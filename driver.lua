@@ -13,7 +13,7 @@ require 'image'
 require 'dpnn'
 require 'model'
 require 'writeMidi'
-require 'trainer'
+require 'Trainer'
 require 'AutoEncoder'
 require 'BinaryClassReward'
 torch.setdefaulttensortype('torch.FloatTensor')
@@ -148,7 +148,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
   action:add(nn.ReinforceBernoulli(true))
 
   locationSensor = nn.Sequential()
-  locationSensor:add(nn.ParallelTable():add(nn.Linear(4047,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.ParallelTable():add(nn.Linear(32,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
   locationSensor:add(nn.JoinTable(1,1))
   locationSensor:add(nn.Tanh())
   locationSensor:add(nn.FastLSTM(20,20))
@@ -259,7 +259,7 @@ end
 
 
 --Step 3: Defne Our Loss Function
-if params.autoencoder then
+if params.autoencoder or not params.attention then
 criterion = nn.BCECriterion(nil,false)
 else
 criterion = nn.ParallelCriterion(true)
@@ -287,18 +287,18 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
+train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict}
 
 while not train:done() do
     print("Epoch: ", train.epoch)
-    --train:test()
-    --train:validate()
+    train:tester()
+    train:validater()
     --train()
     train:saveModel()
-    trainLogger:add{train:train()}
+    trainLogger:add{train:trainer()}
     trainLogger:style{'-'}
     --trainLogger:plot()
     if train.epoch % params.savemodel == 0 then

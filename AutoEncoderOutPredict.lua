@@ -4,7 +4,7 @@ require 'rnn'
 require 'audiodataset'
 require 'image'
 require 'audio'
-
+require 'gnuplot'
 function tensorToNumber(tensor)
   local number = 0
   --print(tensor)
@@ -29,12 +29,13 @@ out2 = {}
 
 --input = torch.zeros(20000,16)
 --input = input:cat(torch.randn(20000,16):bernoulli())
-input = data.audio:sub(1,100)
+input = data.audio:sub(1,1)
 input = {input}
-for i = 1,2000 do
+for i = 1,40000 do
 	input[i+1] = model:forward({input[i]})[1]:clone():round()
 	--print(input[i])
 	print(i)
+	print(input[i+1])
 end
 
 out = join:forward(input):clone()
@@ -46,9 +47,12 @@ out = join:forward(input):clone()
 --image.save('test3.pgm',image.scale(image.minmax{tensor=out2},1000,1000))
 --print("done test3")
 
+
 song = torch.zeros(out:size(1),1)
 for i=1,out:size(1) do
 	song[i][1] = tensorToNumber(out[i])
 end
+
+gnuplot.plot(song)
 print("done")
 audio.save('test.wav',song,data.samplerate+50)
