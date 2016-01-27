@@ -201,7 +201,7 @@ function Trainer:train()
                             self.model:getGradParameters():div(count)--#data)
                            end
                             f = f/count--#data
-                            print(count)
+                            --print(count)
                             return f,self.model:getGradParameters()
 
                 end
@@ -216,7 +216,7 @@ function Trainer:train()
 
    end -- End of while loop
 
-   print(loss/count)
+   --print(loss/count)
    --print(confusion)
 
    -- next epoch

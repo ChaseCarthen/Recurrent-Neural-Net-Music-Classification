@@ -16,6 +16,8 @@ require 'writeMidi'
 require 'Trainer'
 require 'AutoEncoder'
 require 'BinaryClassReward'
+require 'AutoEncoderTrainer'
+require 'StackedAutoEncoder'
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
@@ -82,6 +84,7 @@ classes = dl.classes
 print(params.rnnc)
 print(params.attention)
 print(params.input)
+params.AutoTrain = false
 if params.rnnc and params.input == "audio" and not params.attention then
   -- This Describes the default model to be generate for classification.
   DefaultModel = function(num_output)
@@ -211,7 +214,11 @@ elseif params.autoencoder and params.input == "audio" then
   decoder = nn.Sequential()
   decoder:add(r3)
 
-  model = AutoEncoder(encoder,decoder)
+  ae = AutoEncoder(encoder,decoder)
+  model = StackedAutoEncoder()
+  model:AddLayer(ae)
+  AutoEncoderMod = model
+  params.TrainAuto = true
   if(cuda) then
     model:cudaify('torch.FloatTensor')
     print("DONE")
@@ -249,14 +256,17 @@ elseif params.autoencoder and params.input == "midi" then
   decoder = nn.Sequential()
   decoder:add(r3)
 
-  model = AutoEncoder(encoder,decoder)
+  ae = AutoEncoder(encoder,decoder)
+  model = StackedAutoEncoder()
+  AutoEncoderMod = model
+  model:AddLayer(ae)
+  params.TrainAuto = true
+  print("HERE" .. params.TrainAuto)
   if(cuda) then
     model:cudaify('torch.FloatTensor')
   end
 
 end
-
-
 
 --Step 3: Defne Our Loss Function
 if params.autoencoder or not params.attention then
@@ -287,15 +297,23 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
+if not params.autoencoder then
+  train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict}
+else
+  train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
+optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
+serialize = params.serialize,epochrecord = params.epochrecord,
+frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict, TrainAuto = params.TrainAuto, 
+layerCount = 1, AutoEncoder = AutoEncoderMod}
+end
 
 while not train:done() do
     print("Epoch: ", train.epoch)
-    train:tester()
-    train:validater()
+    --train:tester()
+    --train:validater()
     --train()
     train:saveModel()
     trainLogger:add{train:trainer()}

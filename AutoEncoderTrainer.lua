@@ -11,7 +11,7 @@ function AutoEncoderTrainer:__init(args)
 	if args.epochLimit ~= nil then
 		self.epochLimit = args.epochLimit
 	else
-		self.epochLimit = 100
+		self.epochLimit = 200
 	end
 
 	if args.model == nil then
@@ -59,8 +59,12 @@ function AutoEncoderTrainer:__init(args)
 	self.epochrecord = args.epochrecord or 50
   self.predict = args.predict
 	self.modelfile = args.modelfile or "train.model"
+  self.autofile = args.autofile or "auto.model"
   self.AutoEncoder = args.AutoEncoder
-  self.layer = 1 -- the current layer 6.... 
+  self.layer = 1 -- the current layer 6....
+  self.TrainAuto = args.TrainAuto
+
+  self.layerCount = args.layerCount
 end
 
 function AutoEncoderTrainer:splitData(data)
@@ -122,15 +126,24 @@ function AutoEncoderTrainer:train()
               local feval = function(x)
                            -- get new parameters
                            if self.training then
-                            if x ~= self.model:getParameters() then
-                              print (x)
-                              self.model:getParameters():copy(x)
-                            end
-                            --print (self.model)
-                            -- reset gradients
-                            self.model:getGradParameters():zero()
-
-                          end
+                            if not self.AutoEncoder then
+                              if x ~= self.model:getParameters() then
+                                print (x)
+                                self.model:getParameters():copy(x)
+                              end
+                              --print (self.model)
+                              -- reset gradients
+                              self.model:getGradParameters():zero()
+                              else
+                                if x ~= self.model:getParameters(self.layer) then
+                                  print (x)
+                                  self.AutoEncoder:getParameters(self.layer):copy(x)
+                                end
+                                --print (self.model)
+                                -- reset gradients
+                                self.AutoEncoder:getGradParameters(self.layer):zero()
+                            end -- auto encoder end
+                          end -- training end
 
                            -- f is the average of all criterions
                            local f = 0
@@ -169,7 +182,13 @@ function AutoEncoderTrainer:train()
                             end
 
                            --print(t)
-                           local output = self.model:forward(input)
+                           if not self.TrainAuto then
+                            input = self.AutoEncoder:forward(self.layerCount,input)
+                            local output = self.model:forward(input)
+                           else
+                            local output = self.AutoEncoder:forward(self.layer,input)
+                           end
+                           
 
                            for os = 1,#output do
                               output[os] = output[os]:clone()
@@ -183,8 +202,14 @@ function AutoEncoderTrainer:train()
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                            	out[testl] = self.join:forward(output):clone()
                        	   end
-                          local err = self.model:backward(input,output,t)--inputs)
-                           f = f + err
+                           local err = 0
+                           if not self.TrainAuto then
+                            err = self.model:backward(self.layer,input,output,t)--inputs)
+                           else
+                            err = self.AutoEncoder:backward(self.layer,input,output,t)
+                           end
+                            f = f + err
+
                            
                           
                         collectgarbage();
@@ -199,16 +224,25 @@ function AutoEncoderTrainer:train()
                            end
 
                            -- normalize gradients and f(X)
-                           if self.training then
+                           if self.training and not self.TrainAuto then
                             self.model:getGradParameters():div(count)--#data)
+                           elseif self.training and self.TrainAuto then
+                            self.AutoEncoder:getGradParameters(self.layer):div(count)
                            end
                             f = f/count--#data
-                            print(count)
-                            return f,self.model:getGradParameters()
+                            --print(count)
+                            if not self.TrainAuto then
+                              return f,self.model:getGradParameters()
+                            else
+                              return f,self.AutoEncoder:getGradParameters(self.layer)
+                            end
 
                 end
-                if self.training then
+                if self.training and not self.TrainAuto then
                   _,fs2 = self.optimModule(feval, self.model:getParameters(), self.optimState)
+                  loss = loss + fs2[1]
+                elseif self.training and self.TrainAuto then
+                  _,fs2 = self.optimModule(feval, self.AutoEncoder:getParameters(self.layer), self.optimState)
                   loss = loss + fs2[1]
                 else
                   fs2,_ = feval(nil)
@@ -228,8 +262,17 @@ function AutoEncoderTrainer:train()
    return (loss/count)
 end
 
+function AutoEncoderTrainer:setLayer(layer)
+  self.layer = layer
+end
+
 function AutoEncoderTrainer:done()
-	return self.epoch > self.epochLimit
+  if not (self.layer >= self.layerCount) and self.TrainAuto and self.epoch > self.epochLimit then
+    self.epoch = 1
+    self.layer = self.layer + 1
+  end
+
+	return self.epoch > self.epochLimit or (self.TrainAuto and self.epoch > self.epochLimit and self.layer >= self.layerCount)
 end
 
 
