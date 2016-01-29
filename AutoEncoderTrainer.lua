@@ -4,8 +4,23 @@
 -- This class assumes that it will be given a audiodataset
 require 'xlua'
 require 'optim'
+require 'nn'
 local AutoEncoderTrainer = torch.class("AutoEncoderTrainer")
 
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
 function AutoEncoderTrainer:__init(args)
 	if args.epochLimit ~= nil then
@@ -30,6 +45,7 @@ function AutoEncoderTrainer:__init(args)
 		-- throw an error here
 	else
 		self.optimState = args.optimState
+    self.startState = deepcopy(args.optimState)
 	end
 
 	if args.optimModule == nil then
@@ -40,8 +56,7 @@ function AutoEncoderTrainer:__init(args)
 
 	self.dataSplit = args.dataSplit or 20000
 	self.sequenceSplit = args.sequenceSplit or 5000
-	print(self.dataSplit)
-	print(self.sequenceSplit)
+
 	-- What is our target and input..
 	self.target = args.target
 	self.input = args.input
@@ -53,7 +68,7 @@ function AutoEncoderTrainer:__init(args)
 	self.graphing = args.graphing or false
 	self.epoch = 1
 	self.join = nn.JoinTable(1)
-	print (args.serialize)
+
 	self.serialize = false or args.serialize
 	self.frequency = args.frequency or 10
 	self.epochrecord = args.epochrecord or 50
@@ -61,7 +76,7 @@ function AutoEncoderTrainer:__init(args)
 	self.modelfile = args.modelfile or "train.model"
   self.autofile = args.autofile or "auto.model"
   self.AutoEncoder = args.AutoEncoder
-  self.layer = 1 -- the current layer 6....
+  self.layer = args.layer -- the current layer 6....
   self.TrainAuto = args.TrainAuto
 
   self.layerCount = args.layerCount
@@ -115,7 +130,7 @@ function AutoEncoderTrainer:train()
    
    shuffle = torch.randperm(numTrain)
    done = false
-   loss = 0
+   local loss = 0
    count = 0
    while not done do
     data = self.datasetLoader:loadNextSet()
@@ -183,15 +198,22 @@ function AutoEncoderTrainer:train()
 
                            --print(t)
                            if not self.TrainAuto then
-                            input = self.AutoEncoder:forward(self.layerCount,input)
-                            local output = self.model:forward(input)
+                            input = self.AutoEncoder:forward(self.layerCount,input,true)
+                            --print(input)
+                            output = self.model:forward(input)
+                            --print(output[1][1]:max())
+                            --print(output)
                            else
-                            local output = self.AutoEncoder:forward(self.layer,input)
+                            if self.layer > 1 then
+                              input = self.AutoEncoder:forward(self.layer - 1,input,true)
+                            end
+                            t = input
+                            output = self.AutoEncoder:layerForward(self.layer,input)
                            end
                            
 
                            for os = 1,#output do
-                              output[os] = output[os]:clone()
+                              --output[os] = output[os]:clone()
                               if type(output[os]) == 'table' then
                            		   --output[os][1]:round()
                               else
@@ -204,7 +226,9 @@ function AutoEncoderTrainer:train()
                        	   end
                            local err = 0
                            if not self.TrainAuto then
-                            err = self.model:backward(self.layer,input,output,t)--inputs)
+                            --print(self.layer)
+                            --print(input)
+                            err = self.model:backward(input,output,t)--inputs)
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
@@ -252,7 +276,7 @@ function AutoEncoderTrainer:train()
 
    end -- End of while loop
 
-   print(loss/count)
+   print("LOSS: " .. loss/count)
    --print(confusion)
 
    -- next epoch
@@ -267,12 +291,15 @@ function AutoEncoderTrainer:setLayer(layer)
 end
 
 function AutoEncoderTrainer:done()
-  if not (self.layer >= self.layerCount) and self.TrainAuto and self.epoch > self.epochLimit then
+  if not (self.layer > self.layerCount) and self.TrainAuto and self.epoch > self.epochLimit then
     self.epoch = 1
     self.layer = self.layer + 1
+    self.optimState = self.startState
+    self.startState = deepcopy(self.startState)
+    self.AutoEncoder:setCriterion(nn.SequencerCriterion(nn.BCECriterion()))
   end
 
-	return self.epoch > self.epochLimit or (self.TrainAuto and self.epoch > self.epochLimit and self.layer >= self.layerCount)
+	return self.epoch > self.epochLimit or (self.TrainAuto and self.layer > self.layerCount)
 end
 
 

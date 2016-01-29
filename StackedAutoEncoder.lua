@@ -41,6 +41,17 @@ function StackedAutoEncoder:forward(count,data,hidden)
 	return output
 end
 
+function StackedAutoEncoder:OutputHidden(count,data)
+	return self.layer[count]:OutputHidden(data)
+end
+
+function StackedAutoEncoder:OutputActual(count,data)
+	return self.layer[count]:OutputActual(data)
+end
+
+function StackedAutoEncoder:layerForward(count,data)
+	return self.layer[count]:forward(data)
+end
 
 function StackedAutoEncoder:setCriterion(criterion)
   for i=1,self.layerCount do
@@ -65,8 +76,11 @@ function StackedAutoEncoder:getGradParameters(count)
 end
 
 function StackedAutoEncoder:getParameters(count)
-
   return self.layer[count]:getParameters()
+end
+
+function StackedAutoEncoder:getLayerCount()
+	return #self.layer
 end
 
 function StackedAutoEncoder:cudaify(string)

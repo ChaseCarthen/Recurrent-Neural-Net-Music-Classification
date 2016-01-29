@@ -170,7 +170,7 @@ function Trainer:train()
                            local output = self.model:forward(input)
 
                            for os = 1,#output do
-                              output[os] = output[os]:clone()
+                              --output[os] = output[os]:clone()
                               if type(output[os]) == 'table' then
                                  --output[os][1]:round()
                               else

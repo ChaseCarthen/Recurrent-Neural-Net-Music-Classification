@@ -31,6 +31,7 @@ cmd:option("--serialize",false,"Serialize outputs")
 cmd:option("-epochrecord", 50, "Every nth epoch to serialize data.")
 cmd:option("-frequency",10,"Every jth dataset is used to be serialized")
 cmd:option("-modelfile","train.model","What you wish to save this model as!")
+cmd:option("-autoencoderfile","auto.model","The autoencoder file to be used.")
 cmd:option("-savemodel", 4, "Every nth epoch you save the model used by this driver.")
 cmd:option("--autoencoder",false,"An option to use an autoencoder")
 cmd:option("--rnnc",false,"An option to use rnnc model.")
@@ -38,9 +39,10 @@ cmd:option("-target","midi","What will be this models target.")
 cmd:option("-input","audio","What will be ths models input.")
 cmd:option("-dataSplit",20000,"How much data will be split up into sequences be split up.")
 cmd:option("-sequenceSplit",5000,"How much a sequence will be split up.")
-cmd:option("epochLimit",200,"How many epochs to run for.")
+cmd:option("-epochLimit",200,"How many epochs to run for.")
 cmd:option("--attention",false,"Use an attention model.")
 cmd:option("--predict",false,"Writing a prediction model?")
+cmd:option("--encoded",false,"Use a encoded model.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -80,6 +82,9 @@ end
 dl = DatasetLoader("processed",params.input,params.target)
 
 classes = dl.classes
+
+
+layer = 1
 
 print(params.rnnc)
 print(params.attention)
@@ -151,7 +156,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
   action:add(nn.ReinforceBernoulli(true))
 
   locationSensor = nn.Sequential()
-  locationSensor:add(nn.ParallelTable():add(nn.Linear(32,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.ParallelTable():add(nn.Linear(16,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
   locationSensor:add(nn.JoinTable(1,1))
   locationSensor:add(nn.Tanh())
   locationSensor:add(nn.FastLSTM(20,20))
@@ -183,6 +188,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
    model:addlayer(nn.Sequencer(concat2))
   --model:remember('both')
 elseif params.autoencoder and params.input == "audio" then
+  params.layer = 1
   params.target = params.input
   mlp=nn.Sequential()
   mlp:add(nn.Linear(32,64))
@@ -202,21 +208,41 @@ elseif params.autoencoder and params.input == "audio" then
 
   --rhobatch = 10000
   --rho = 50
-  r3 = nn.Recurrent(
+  r3 = nn.Sequential():add(nn.Dropout(.2)):add(nn.Recurrent(
   32, mlp2, 
   nn.Linear(32, 32), nn.Sigmoid(), 
   rho
-  )
+  ))
   r2 = nn.Sequencer(r2)
   r3 = nn.Sequencer(r3)
   encoder = nn.Sequential()
-  encoder:add(nn.Sequencer(nn.LSTM(32,64)))
+  encoder:add(nn.Sequencer(nn.Sequential():add(nn.LSTM(32,64)):add(nn.Sigmoid())  ))
   decoder = nn.Sequential()
+  --decoder:add(nn.Sequencer(nn.Dropout(.1)))
   decoder:add(r3)
+  params.modelfile = params.autoencoderfile
+  
+  --print(encoder)
 
   ae = AutoEncoder(encoder,decoder)
+  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(64,40)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(40,64)):add(nn.Sigmoid()))
+  ae2 = AutoEncoder(encoder,decoder)
+
+  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(40,30)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(30,40)):add(nn.Sigmoid()))
+  ae3 = AutoEncoder(encoder,decoder)
+
+  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(30,16)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(16,30)):add(nn.Sigmoid()))
+  ae4 = AutoEncoder(encoder,decoder)
+
   model = StackedAutoEncoder()
   model:AddLayer(ae)
+  model:AddLayer(ae2)
+  model:AddLayer(ae3)
+  model:AddLayer(ae4)
+  layer = model:getLayerCount()
   AutoEncoderMod = model
   params.TrainAuto = true
   if(cuda) then
@@ -225,6 +251,7 @@ elseif params.autoencoder and params.input == "audio" then
   end
 
 elseif params.autoencoder and params.input == "midi" then
+  params.layer = 1
   params.target = params.input
   mlp=nn.Sequential()
   mlp:add(nn.Linear(128,64))
@@ -255,11 +282,13 @@ elseif params.autoencoder and params.input == "midi" then
   encoder:add(r2)
   decoder = nn.Sequential()
   decoder:add(r3)
+  params.modelfile = params.autoencoderfile
 
   ae = AutoEncoder(encoder,decoder)
   model = StackedAutoEncoder()
   AutoEncoderMod = model
   model:AddLayer(ae)
+  layer = model:getLayerCount()
   params.TrainAuto = true
   print("HERE" .. params.TrainAuto)
   if(cuda) then
@@ -270,7 +299,7 @@ end
 
 --Step 3: Defne Our Loss Function
 if params.autoencoder or not params.attention then
-criterion = nn.BCECriterion(nil,false)
+criterion = nn.BCECriterion()
 else
 criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
@@ -297,17 +326,25 @@ optimState = {
     learningRateDecay = 1e-7
   }
 
-if not params.autoencoder then
+if params.encoded then
+  AutoEncoderMod = torch.load(params.autoencoderfile)
+  layer = #AutoEncoderMod.layer
+  params.layer = layer
+end
+
+
+if not params.autoencoder and not params.encoded then
   train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict}
 else
+
   train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict, TrainAuto = params.TrainAuto, 
-layerCount = 1, AutoEncoder = AutoEncoderMod}
+layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer }
 end
 
 while not train:done() do
