@@ -199,6 +199,7 @@ function AutoEncoderTrainer:train()
                            --print(t)
                            if not self.TrainAuto then
                             input = self.AutoEncoder:forward(self.layerCount,input,true)
+                            input[1]:round()
                             --print(input)
                             output = self.model:forward(input)
                             --print(output[1][1]:max())

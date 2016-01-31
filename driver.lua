@@ -216,7 +216,8 @@ elseif params.autoencoder and params.input == "audio" then
   r2 = nn.Sequencer(r2)
   r3 = nn.Sequencer(r3)
   encoder = nn.Sequential()
-  encoder:add(nn.Sequencer(nn.Sequential():add(nn.LSTM(32,64)):add(nn.Sigmoid())  ))
+  print("BARK")
+  encoder:add(nn.Sequencer(nn.Sequential():add(nn.FastLSTM(32,40)):add(nn.Linear(40,64)):add(nn.Sigmoid())  ) )
   decoder = nn.Sequential()
   --decoder:add(nn.Sequencer(nn.Dropout(.1)))
   decoder:add(r3)
@@ -225,23 +226,23 @@ elseif params.autoencoder and params.input == "audio" then
   --print(encoder)
 
   ae = AutoEncoder(encoder,decoder)
-  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(64,40)):add(nn.Sigmoid()))
-  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(40,64)):add(nn.Sigmoid()))
+  encoder = nn.Sequencer(nn.Sequential():add(nn.FastLSTM(64,20)):add(nn.Linear(20,40)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.Dropout(.4)):add(nn.FastLSTM(40,64)):add(nn.Sigmoid()))
   ae2 = AutoEncoder(encoder,decoder)
 
-  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(40,30)):add(nn.Sigmoid()))
-  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(30,40)):add(nn.Sigmoid()))
+  encoder = nn.Sequencer(nn.Sequential():add(nn.FastLSTM(40,20)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.Dropout(.4)):add(nn.FastLSTM(20,40)):add(nn.Sigmoid()))
   ae3 = AutoEncoder(encoder,decoder)
 
-  encoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(30,16)):add(nn.Sigmoid()))
-  decoder = nn.Sequencer(nn.Sequential():add(nn.LSTM(16,30)):add(nn.Sigmoid()))
+  encoder = nn.Sequencer(nn.Sequential():add(nn.FastLSTM(20,100)):add(nn.Sigmoid()))
+  decoder = nn.Sequencer(nn.Sequential():add(nn.Dropout(.4)):add(nn.FastLSTM(100,20)):add(nn.Sigmoid()))
   ae4 = AutoEncoder(encoder,decoder)
 
   model = StackedAutoEncoder()
   model:AddLayer(ae)
   model:AddLayer(ae2)
-  model:AddLayer(ae3)
-  model:AddLayer(ae4)
+  --model:AddLayer(ae3)
+  --model:AddLayer(ae4)
   layer = model:getLayerCount()
   AutoEncoderMod = model
   params.TrainAuto = true

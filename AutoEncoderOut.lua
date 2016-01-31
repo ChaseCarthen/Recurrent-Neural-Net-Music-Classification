@@ -29,8 +29,8 @@ out2 = {}
 
 
 for i = 1,#data2 do
-	print(model.layer[1].encoder)
-	out2[i] = model:forward(3,{data2[i]},true)[1]:clone():round()
+	
+	out2[i] = model:forward(2,{data2[i]},true)[1]:clone():round()
 	print(out2[i]:size())
 	print(out2[i]:max())
 	print(out2[i]:min())
