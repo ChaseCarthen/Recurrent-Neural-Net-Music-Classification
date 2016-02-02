@@ -59,6 +59,10 @@ function Trainer:__init(args)
   self.epochrecord = args.epochrecord or 50
   self.predict = args.predict
   self.modelfile = args.modelfile or "train.model"
+
+  self.temporalconv = args.temporalconv
+  self.stepsize = args.stepsize or 1
+  self.windowidth = args.windowidth or 1000
 end
 
 function Trainer:splitData(data)
@@ -145,14 +149,35 @@ function Trainer:train()
                               prevout = nil
                             end
 
-                            input = inputs[testl]:split(self.sequenceSplit)
+                            if not self.temporalconv then
+                              input = inputs[testl]:split(self.sequenceSplit)
+                            else
+                              if inputs[testl]:size(1) ~= self.dataSplit then
+                                --print(inputs[testl]:size())
+                                inputs[testl] = torch.cat(inputs[testl], torch.zeros(self.dataSplit - inputs[testl]:size(1), inputs[testl]:size(2) ),1 )
+                              end
+                              input = {inputs[testl]}
+                            end
+
                             if self.predict and prevout ~= nil then
                               input = prevout
                             end
-                            t = target[testl]:split(self.sequenceSplit)
-
+                            if not self.temporalconv then
+                              t = target[testl]:split(self.sequenceSplit)
+                            else
+                              if target[testl]:size(1) ~= self.dataSplit then
+                                target[testl] = torch.cat(target[testl], torch.zeros(self.dataSplit - target[testl]:size(1), target[testl]:size(2) ),1 )
+                              end
+                              --print("windowidth" .. self.windowidth)
+                              --print("stepsize" .. self.stepsize)
+                              t = TemporalSplit(target[testl], self.windowidth, self.stepsize)
+                            end
+                            --print(input)
+                            --print(t)
+                            --print(self.temporalconv)
+                            --print("=====================================================================================================")
                             -- Making sure the last split has the proper size for passing into a sequencer element.
-                            if testl == #inputs then
+                            if testl == #inputs and not self.temporalconv then
                               if t[#t]:size(1) ~= self.sequenceSplit then
                                 t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
                                 if self.predict == false or prevout == nil then
@@ -168,7 +193,8 @@ function Trainer:train()
 
                            --print(t)
                            local output = self.model:forward(input)
-
+                           --print(output)
+                           --print(t)
                            for os = 1,#output do
                               --output[os] = output[os]:clone()
                               if type(output[os]) == 'table' then
@@ -179,7 +205,7 @@ function Trainer:train()
                            end
                            prevout = output
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-                            out[testl] = self.join:forward(output):clone()
+                            out[testl] = self.join:forward(output):clone():round()
                            end
                           local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
@@ -216,7 +242,7 @@ function Trainer:train()
 
    end -- End of while loop
 
-   --print(loss/count)
+   print(loss/count)
    --print(confusion)
 
    -- next epoch

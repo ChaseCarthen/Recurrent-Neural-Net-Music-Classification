@@ -5,6 +5,27 @@
 require 'xlua'
 require 'optim'
 require 'nn'
+
+
+ function TemporalSplit(tensor,windowidth,stepsize)
+  local Tensor = {}
+  local counter = 1
+  local step = 1
+  local End = tensor:size(1)
+  -- (nInputFrame - kW) / dW + 1
+  steps = ( End - windowidth ) / stepsize + 1
+  for i = 1,steps do
+      Tensor[counter] = tensor:sub(step,step + windowidth - 1 ):float():sum(1):ge(1):clone()
+      counter = counter + 1
+      step = step + stepsize  
+  end
+
+  join = nn.JoinTable(1)
+  return {join:forward(Tensor)}
+end
+
+
+
 local AutoEncoderTrainer = torch.class("AutoEncoderTrainer")
 
 function deepcopy(orig)
@@ -80,6 +101,9 @@ function AutoEncoderTrainer:__init(args)
   self.TrainAuto = args.TrainAuto
 
   self.layerCount = args.layerCount
+  self.temporalconv = args.temporalconv
+  self.stepsize = args.stepsize or 1
+  self.windowidth = args.windowidth or 1000
 end
 
 function AutoEncoderTrainer:splitData(data)
@@ -102,7 +126,8 @@ function AutoEncoderTrainer:splitData(data)
     target = target:sub(2,40000)
   end
   input = input:split(self.dataSplit)
-  target = target:split(self.dataSplit)   
+  
+  target = target:split(self.dataSplit)
 	return input,target
 end
 
@@ -175,11 +200,20 @@ function AutoEncoderTrainer:train()
                               prevout = nil
                             end
 
-                            input = inputs[testl]:split(self.sequenceSplit)
+                            if not self.temporalconv then
+                              input = inputs[testl]:split(self.sequenceSplit)
+                            else
+                              input = TemporalSplit(inputs[testl], self.windowidth, self.stepsize)
+                            end
+
                             if self.predict and prevout ~= nil then
                               input = prevout
                             end
-                            t = target[testl]:split(self.sequenceSplit)
+                            if not self.temporalconv then
+                              t = target[testl]:split(self.sequenceSplit)
+                            else
+                              t = TemporalSplit(target[testl], self.windowidth, self.stepsize)
+                            end
 
                             -- Making sure the last split has the proper size for passing into a sequencer element.
                             if testl == #inputs then
@@ -199,7 +233,7 @@ function AutoEncoderTrainer:train()
                            --print(t)
                            if not self.TrainAuto then
                             input = self.AutoEncoder:forward(self.layerCount,input,true)
-                            input[1]:round()
+                          
                             --print(input)
                             output = self.model:forward(input)
                             --print(output[1][1]:max())

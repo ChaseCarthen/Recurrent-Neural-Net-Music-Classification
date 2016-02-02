@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/xmas_simple_chords_9.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/027500b_.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
@@ -29,14 +29,18 @@ data3 = data.midi:float():split(20000)
 out = {}
 
 for i = 1,#data2 do
-	print(data2[i]:size())
+  print("=================")
+	print(data2[i]:mean())
   --print(model:forward({data2[i]}))
 	--model:forget()
-	out[i] = model:forward({data2[i]})[1][1]:clone()
-	print(out[i]:max())
-	print(out[i]:size())
+	out[i] = model:forward({data2[i]})[1]:clone()
+  --print(out)
+	print(model:forward({data2[i]})[1]:mean())
+  print(out[i]:mean())
+  print(data2[i]:mean())
+  print("=====================")
 
-       image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=out[i]:round()},1000,1000))
+       image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=out[i]},1000,1000))
        image.save('testor' .. i .. '.pgm',image.scale(image.minmax{tensor=data3[i]},1000,1000) )
 end
 

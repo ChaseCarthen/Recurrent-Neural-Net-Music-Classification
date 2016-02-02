@@ -43,6 +43,9 @@ cmd:option("-epochLimit",200,"How many epochs to run for.")
 cmd:option("--attention",false,"Use an attention model.")
 cmd:option("--predict",false,"Writing a prediction model?")
 cmd:option("--encoded",false,"Use a encoded model.")
+cmd:option("-windowsize",1000,"Windowsize for passing in samples.")
+cmd:option("-stepsize",1,"Step size to step through the samples.")
+cmd:option("--temporalconv",false,"Use temporal convolution.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -104,8 +107,8 @@ if params.rnnc and params.input == "audio" and not params.attention then
   rho = 5000
 
   mlp2=nn.Sequential()
-  mlp2:add(nn.Linear(256,128))
-  mlp2:add(nn.RReLU())
+  mlp2:add(nn.Linear(36,128))
+  mlp2:add(nn.Sigmoid())
 
   --rhobatch = 10000
   --rho = 50
@@ -116,9 +119,14 @@ if params.rnnc and params.input == "audio" and not params.attention then
   )
 
   r3 = nn.Sequencer(r3)
-  model:addlayer(nn.Sequencer(nn.FastLSTM(32,256)))
+  if not params.temporalconv then 
+    model:addlayer(nn.Sequencer(nn.FastLSTM(32,36)))
+  else
+    model:addlayer(nn.Sequencer(nn.GRU(32,80)))
+    model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
+  end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(r3)
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.FastLSTM(36,100)):add(nn.Linear(100,128)):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       
@@ -156,7 +164,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
   action:add(nn.ReinforceBernoulli(true))
 
   locationSensor = nn.Sequential()
-  locationSensor:add(nn.ParallelTable():add(nn.Linear(16,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
+  locationSensor:add(nn.ParallelTable():add(nn.Linear(8,10)):add(nn.Linear(20,10))) -- first is the passed dataset and second is the action
   locationSensor:add(nn.JoinTable(1,1))
   locationSensor:add(nn.Tanh())
   locationSensor:add(nn.FastLSTM(20,20))
@@ -203,12 +211,12 @@ elseif params.autoencoder and params.input == "audio" then
   )
 
   mlp2=nn.Sequential()
-  mlp2:add(nn.Linear(64,32))
+  mlp2:add(nn.Linear(8,32))
   mlp2:add(nn.Tanh())
 
   --rhobatch = 10000
   --rho = 50
-  r3 = nn.Sequential():add(nn.Dropout(.2)):add(nn.Recurrent(
+  r3 = nn.Sequential():add(nn.Dropout(.4)):add(nn.Recurrent(
   32, mlp2, 
   nn.Linear(32, 32), nn.Sigmoid(), 
   rho
@@ -217,7 +225,7 @@ elseif params.autoencoder and params.input == "audio" then
   r3 = nn.Sequencer(r3)
   encoder = nn.Sequential()
   print("BARK")
-  encoder:add(nn.Sequencer(nn.Sequential():add(nn.FastLSTM(32,40)):add(nn.Linear(40,64)):add(nn.Sigmoid())  ) )
+  encoder:add(nn.Sequencer(nn.Sequential():add(nn.GRU(32,40)):add(nn.Linear(40,8)):add(nn.Sigmoid())  ) )
   decoder = nn.Sequential()
   --decoder:add(nn.Sequencer(nn.Dropout(.1)))
   decoder:add(r3)
@@ -240,7 +248,7 @@ elseif params.autoencoder and params.input == "audio" then
 
   model = StackedAutoEncoder()
   model:AddLayer(ae)
-  model:AddLayer(ae2)
+  --model:AddLayer(ae2)
   --model:AddLayer(ae3)
   --model:AddLayer(ae4)
   layer = model:getLayerCount()
@@ -300,7 +308,7 @@ end
 
 --Step 3: Defne Our Loss Function
 if params.autoencoder or not params.attention then
-criterion = nn.BCECriterion()
+  criterion = nn.BCECriterion(nil,false)
 else
 criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
@@ -322,9 +330,9 @@ trainLogger:setNames{'training error'}--, 'test error')
 
 optimState = {
     learningRate = 0.003,
-    weightDecay = 0.01,
-    momentum = .01,
-    learningRateDecay = 1e-7
+    --weightDecay = 0.01,
+    --momentum = .01,
+    --learningRateDecay = 1e-7
   }
 
 if params.encoded then
@@ -338,14 +346,16 @@ if not params.autoencoder and not params.encoded then
   train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
-frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict}
+frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict,
+stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv}
 else
 
   train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict, TrainAuto = params.TrainAuto, 
-layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer }
+layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer,
+stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv }
 end
 
 while not train:done() do
