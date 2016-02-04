@@ -68,7 +68,9 @@ end
 function Trainer:splitData(data)
   local input = nil
   local target = nil
-
+  --print(data.filename)
+  --print(data.audio:size())
+  --print(data.midi:size())
   if self.target == "midi" then
     target = data.midi:float()
   else
@@ -149,35 +151,22 @@ function Trainer:train()
                               prevout = nil
                             end
 
-                            if not self.temporalconv then
-                              input = inputs[testl]:split(self.sequenceSplit)
-                            else
-                              if inputs[testl]:size(1) ~= self.dataSplit then
-                                --print(inputs[testl]:size())
-                                inputs[testl] = torch.cat(inputs[testl], torch.zeros(self.dataSplit - inputs[testl]:size(1), inputs[testl]:size(2) ),1 )
-                              end
-                              input = {inputs[testl]}
-                            end
+                            input = inputs[testl]:split(self.sequenceSplit)
 
                             if self.predict and prevout ~= nil then
                               input = prevout
                             end
-                            if not self.temporalconv then
                               t = target[testl]:split(self.sequenceSplit)
-                            else
-                              if target[testl]:size(1) ~= self.dataSplit then
-                                target[testl] = torch.cat(target[testl], torch.zeros(self.dataSplit - target[testl]:size(1), target[testl]:size(2) ),1 )
-                              end
                               --print("windowidth" .. self.windowidth)
                               --print("stepsize" .. self.stepsize)
-                              t = TemporalSplit(target[testl], self.windowidth, self.stepsize)
-                            end
+                              
+
                             --print(input)
                             --print(t)
                             --print(self.temporalconv)
                             --print("=====================================================================================================")
                             -- Making sure the last split has the proper size for passing into a sequencer element.
-                            if testl == #inputs and not self.temporalconv then
+                            if testl == #inputs  then
                               if t[#t]:size(1) ~= self.sequenceSplit then
                                 t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
                                 if self.predict == false or prevout == nil then
@@ -191,9 +180,14 @@ function Trainer:train()
                               end
                             end
 
+                            if self.temporalconv then
+                              for i=1,#t do
+                                t[i] = TemporalSplit(t[i], self.windowidth, self.stepsize)[1]
+                              end
+                            end
                            --print(t)
                            local output = self.model:forward(input)
-                           --print(output)
+
                            --print(t)
                            for os = 1,#output do
                               --output[os] = output[os]:clone()
@@ -207,6 +201,7 @@ function Trainer:train()
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                             out[testl] = self.join:forward(output):clone():round()
                            end
+
                           local err = self.model:backward(input,output,t)--inputs)
                            f = f + err
                            

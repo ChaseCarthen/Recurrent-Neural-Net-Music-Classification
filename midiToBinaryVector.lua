@@ -287,12 +287,15 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
   --print "generating Target Vector"
   --data,samplerate = audio.load(filename)
   --print(data:size())
+  data = data:t()
   endtime = notes[#notes].NoteBegin + notes[#notes].NoteDuration
   starttime = notes[1].NoteBegin
   totalduration = (endtime - starttime) / 1000
   print("==========================")
+  print(data:size())
   print(totalduration)
   print(1.0/samplerate*data:size(1))
+  print(data:size(1))
   print("==========================")
 
   currenttime = 0
@@ -313,7 +316,7 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
     end
     --print(i)
   end
-  return data:t(),binVector:t(),samplerate
+  return data,binVector:t(),samplerate
 end
 
 

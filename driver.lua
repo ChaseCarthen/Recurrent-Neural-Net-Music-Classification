@@ -82,7 +82,7 @@ if params.autoencoder then
   params.target = params.input
 end
 
-dl = DatasetLoader("processed",params.input,params.target)
+dl = DatasetLoader(params.data,params.input,params.target)
 
 classes = dl.classes
 
@@ -119,14 +119,16 @@ if params.rnnc and params.input == "audio" and not params.attention then
   )
 
   r3 = nn.Sequencer(r3)
+  inmodel = nn.Sequential()
+  inmodel:add(nn.Linear(4047,1000))
   if not params.temporalconv then 
-    model:addlayer(nn.Sequencer(nn.FastLSTM(32,36)))
+    model:addlayer(nn.Sequencer(inmodel))
   else
     model:addlayer(nn.Sequencer(nn.GRU(32,80)))
     model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
   end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.FastLSTM(36,100)):add(nn.Linear(100,128)):add(nn.Sigmoid()) ))
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(1000,40)):add(nn.Tanh()) :add(nn.FastLSTM(40,128)):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       
