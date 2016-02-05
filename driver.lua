@@ -18,6 +18,7 @@ require 'AutoEncoder'
 require 'BinaryClassReward'
 require 'AutoEncoderTrainer'
 require 'StackedAutoEncoder'
+require 'TestLSTM'
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
@@ -46,6 +47,7 @@ cmd:option("--encoded",false,"Use a encoded model.")
 cmd:option("-windowsize",1000,"Windowsize for passing in samples.")
 cmd:option("-stepsize",1,"Step size to step through the samples.")
 cmd:option("--temporalconv",false,"Use temporal convolution.")
+cmd:option("-GPU",1,"The GPU number to use.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -68,6 +70,10 @@ then
 	print("CUNN")
   require 'cutorch'
 	require 'cunn'
+  if cutorch.getDeviceCount() > params.GPU or params.GPU < 1 then
+    params.GPU = 1
+  end
+  cutorch.setDevice(params.GPU)
 end
 
 local math = require 'math'
@@ -120,7 +126,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
 
   r3 = nn.Sequencer(r3)
   inmodel = nn.Sequential()
-  inmodel:add(nn.Linear(4047,1000))
+  inmodel:add(nn.TestLSTM(4047,100))
   if not params.temporalconv then 
     model:addlayer(nn.Sequencer(inmodel))
   else
@@ -128,7 +134,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
     model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
   end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(1000,40)):add(nn.Tanh()) :add(nn.FastLSTM(40,128)):add(nn.Sigmoid()) ))
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(100,128)):add(nn.ReLU()):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       

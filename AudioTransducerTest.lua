@@ -33,7 +33,9 @@ for i = 1,#data2 do
 	--print(data2[i]:mean())
   --print(model:forward({data2[i]}))
 	--model:forget()
-	out[i] = model:forward(data2[i]:split(5000))
+  d = data2[i]:split(100)
+  d[#d] = nil
+	out[i] = model:forward(d)
   --print(out)
 	--print(model:forward({data2[i]})[1]:mean())
   --print(out[i]:mean())
