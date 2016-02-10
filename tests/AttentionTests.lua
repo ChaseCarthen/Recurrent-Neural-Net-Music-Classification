@@ -29,12 +29,17 @@ attention:add(concat2)
 
 out = {}
 
-input = torch.ones(4,10):split(2)
+input = torch.ones(6,10):split(3)
 out[1] = attention:forward(input[1])
 print(ab.rnn.step)
 --out[1][1]:clone()
 --out[1][2][2]:clone()
 out[2] = attention:forward(input[2])
+print(ab.rnn.step)
+
+attention = nn.Sequencer(attention)
+
+attention:forward(input)
 print(ab.rnn.step)
 --out[1][1]:clone()
 --out[2][2][2]:clone()

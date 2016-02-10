@@ -70,7 +70,7 @@ function BinaryClassReward:updateGradInput(inputTable, target)
 
    -- broadcast reward to modules
    -- A Hack
-   self.module:reinforce(self.vrReward:cuda())
+   self.module:reinforce(self.vrReward)
    --for i = 1, self.vrReward:size(1) do
    --   self.module:reinforce(self.vrReward[i])
    --end  

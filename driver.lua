@@ -47,6 +47,7 @@ cmd:option("--encoded",false,"Use a encoded model.")
 cmd:option("-windowsize",1000,"Windowsize for passing in samples.")
 cmd:option("-stepsize",1,"Step size to step through the samples.")
 cmd:option("--temporalconv",false,"Use temporal convolution.")
+cmd:option("--normalize",false,"Normalize input data into the model.")
 cmd:option("-GPU",1,"The GPU number to use.")
 cmd:text()
 
@@ -126,7 +127,8 @@ if params.rnnc and params.input == "audio" and not params.attention then
 
   r3 = nn.Sequencer(r3)
   inmodel = nn.Sequential()
-  inmodel:add(nn.TestLSTM(4047,100))
+  inmodel:add(nn.FastLSTM(1281,500))
+  --inmodel:add(nn.Dropout())
   if not params.temporalconv then 
     model:addlayer(nn.Sequencer(inmodel))
   else
@@ -134,7 +136,7 @@ if params.rnnc and params.input == "audio" and not params.attention then
     model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
   end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(100,128)):add(nn.ReLU()):add(nn.Sigmoid()) ))
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(500,128)):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       
@@ -219,31 +221,33 @@ elseif params.autoencoder and params.input == "audio" then
   )
 
   mlp2=nn.Sequential()
-  mlp2:add(nn.Linear(8,32))
+  mlp2:add(nn.Linear(40,1281))
   mlp2:add(nn.Tanh())
 
   --rhobatch = 10000
   --rho = 50
   r3 = nn.Sequential():add(nn.Dropout(.4)):add(nn.Recurrent(
-  32, mlp2, 
-  nn.Linear(32, 32), nn.Sigmoid(), 
+  1281, mlp2, 
+  nn.Linear(1281, 1281), nn.Sigmoid(), 
   rho
   ))
+
   r2 = nn.Sequencer(r2)
   r3 = nn.Sequencer(r3)
   encoder = nn.Sequential()
-  print("BARK")
-  encoder:add(nn.Sequencer(nn.Sequential():add(nn.GRU(32,40)):add(nn.Linear(40,8)):add(nn.Sigmoid())  ) )
-  decoder = nn.Sequential()
-  --decoder:add(nn.Sequencer(nn.Dropout(.1)))
-  decoder:add(r3)
+
+  encoder:add(nn.FastLSTM(1281,256))
+  encoder:add(nn.Sigmoid())
+  encoder = nn.Sequencer(encoder)
+  decoder = nn.Sequential():add(nn.Linear(256,1281))
+  decoder = nn.Sequencer(decoder)
   params.modelfile = params.autoencoderfile
   
   --print(encoder)
 
   ae = AutoEncoder(encoder,decoder)
-  encoder = nn.Sequencer(nn.Sequential():add(nn.FastLSTM(64,20)):add(nn.Linear(20,40)):add(nn.Sigmoid()))
-  decoder = nn.Sequencer(nn.Sequential():add(nn.Dropout(.4)):add(nn.FastLSTM(40,64)):add(nn.Sigmoid()))
+  encoder = nn.Sequencer(nn.Sequential(): add(nn.FastLSTM(256,64)))
+  decoder = nn.Sequencer(nn.Sequential(): add(nn.Linear(64,256)) )
   ae2 = AutoEncoder(encoder,decoder)
 
   encoder = nn.Sequencer(nn.Sequential():add(nn.FastLSTM(40,20)):add(nn.Sigmoid()))
@@ -317,6 +321,10 @@ end
 --Step 3: Defne Our Loss Function
 if params.autoencoder or not params.attention then
   criterion = nn.BCECriterion(nil,false)
+  if params.autoencoder then
+    print("BARK")
+    criterion = nn.MSECriterion()
+  end
 else
 criterion = nn.ParallelCriterion(true)
       :add(nn.ModuleCriterion(nn.BCECriterion(nil,false), nil, nn.Convert())) -- BACKPROP
@@ -337,7 +345,7 @@ trainLogger = optim.Logger('train.log')
 trainLogger:setNames{'training error'}--, 'test error')
 
 optimState = {
-    learningRate = 0.003,
+    learningRate = 0.005,
     --weightDecay = 0.01,
     --momentum = .01,
     --learningRateDecay = 1e-7
@@ -359,19 +367,20 @@ stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = param
 else
 
   train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
-optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
+optimModule = optim.adadelta, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict, TrainAuto = params.TrainAuto, 
 layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer,
-stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv }
+stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv,normalize = params.normalize }
 end
 
 while not train:done() do
     print("Epoch: ", train.epoch)
+
     --train:tester()
     --train:validater()
     --train()
-    train:saveModel()
+    --train:saveModel()
     trainLogger:add{train:trainer()}
     trainLogger:style{'-'}
     --trainLogger:plot()

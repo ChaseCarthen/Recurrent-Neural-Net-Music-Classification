@@ -18,37 +18,52 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/027500b_.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed2/train/jazz.00001.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
 model = torch.load('./auto.model')
 
-data2 = data.audio:float():split(10000)
-data3 = data.midi:float():split(10000)
+data2 = image.minmax {tensor=data.audio:float() }:split(100)
+--data3 = data.midi:float():split(10000)
 out2 = {}
 
-
+out3 = {}
 for i = 1,#data2 do
-	
-	out2[i] = model:forward(1,{data2[i]},true)[1]:clone()
+	print(data2[i]:size())
+	out2[i] = model:forward(1,{data2[i]},false)[1]:clone()
 	print(out2[i]:size())
 	print(out2[i]:max())
 	print(out2[i]:min())
 	print(out2[i]:mean())
 	--print(out2[i][1])
 	print("=================")
-	image.save('test'.. i ..'.pgm',image.scale(image.minmax{tensor=out2[i]},1000,1000))
+	--image.save('test'.. i ..'.pgm',image.scale(image.minmax{tensor=out2[i]},1000,1000))
+	if i > 1 and i < #data2 then
+		print("SUM: " .. (out2[i] - out2[i-1]):sum() )
+		print("Original SUM: " .. (data2[i] - data2[i-1]):sum() )
+
+	end
+	out3[i] = out2[i] - data2[i]
+	--print(out2[i])
 	--image.save('testor'.. i ..'.pgm',image.scale(image.minmax{tensor=data2[i]},1000,1000))
 	--image.save('testma'.. i ..'.pgm',image.scale(image.minmax{tensor=data3[i]},1000,1000))
 
 end
 
 out2 = join:forward(out2):clone()
-
---image.save('test.pgm',image.scale(image.minmax{tensor=out},1000,1000))
+out3 = join:forward(out3):clone()
+data2 = join:forward(data2):clone()
+image.save('autospectrogram.pgm',image.scale(out2,1000,1000))
 --print("done test")
---image.save('test2.pgm',image.scale(image.minmax{tensor=data.audio},1000,1000))
+image.save('spectrogram.pgm',image.scale(image.minmax{tensor=data2},1000,1000))
+image.save('compare.pgm',image.scale(image.minmax{tensor=out3},1000,1000))
+--image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
+test = torch.zeros(2,2)
+
+test[1][1] = 1
+test[2][2] = 1
+
 --print("done test2")
 --image.save('test3.pgm',image.scale(image.minmax{tensor=out2},1000,1000))
 --print("done test3")
@@ -58,4 +73,6 @@ out2 = join:forward(out2):clone()
 --	song[i][1] = tensorToNumber(out[i])
 --end
 print("done")
+--print(out3:min())
+print(data2:min())
 --audio.save('test.wav',song,data.samplerate+50)

@@ -4,6 +4,7 @@
 -- This class assumes that it will be given a audiodataset
 require 'xlua'
 require 'optim'
+require 'image'
 local Trainer = torch.class("Trainer")
 
 
@@ -86,7 +87,7 @@ function Trainer:splitData(data)
     input = input:sub(1,40000-1)
     target = target:sub(2,40000)
   end
-  input = input:split(self.dataSplit)
+  input = image.minmax{tensor=input}:split(self.dataSplit)
   target = target:split(self.dataSplit)   
   return input,target
 end

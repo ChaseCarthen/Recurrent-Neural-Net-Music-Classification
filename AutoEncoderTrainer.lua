@@ -5,7 +5,7 @@
 require 'xlua'
 require 'optim'
 require 'nn'
-
+require 'image'
 
  function TemporalSplit(tensor,windowidth,stepsize)
   local Tensor = {}
@@ -104,6 +104,9 @@ function AutoEncoderTrainer:__init(args)
   self.temporalconv = args.temporalconv
   self.stepsize = args.stepsize or 1
   self.windowidth = args.windowidth or 1000
+
+  -- applying normalization to inputs
+  self.normalize = args.normalize or false
 end
 
 function AutoEncoderTrainer:splitData(data)
@@ -125,8 +128,12 @@ function AutoEncoderTrainer:splitData(data)
     input = input:sub(1,40000-1)
     target = target:sub(2,40000)
   end
+  if self.normalize then
+    input = image.minmax{tensor=input}
+    target = image.minmax{tensor=target}
+  end
+
   input = input:split(self.dataSplit)
-  
   target = target:split(self.dataSplit)
 	return input,target
 end
@@ -232,8 +239,11 @@ function AutoEncoderTrainer:train()
 
                            --print(t)
                            if not self.TrainAuto then
-                            input = self.AutoEncoder:forward(self.layerCount,input,true)
-                          
+                            tempinput = self.AutoEncoder:forward(1,input,false)
+                            
+                            for i=1,#input do
+                              input[i] = input[i] - tempinput[i]
+                            end
                             --print(input)
                             output = self.model:forward(input)
                             --print(output[1][1]:max())
@@ -326,12 +336,14 @@ function AutoEncoderTrainer:setLayer(layer)
 end
 
 function AutoEncoderTrainer:done()
+  print(self.layer)
+  print(self.layerCount)
   if not (self.layer > self.layerCount) and self.TrainAuto and self.epoch > self.epochLimit then
     self.epoch = 1
     self.layer = self.layer + 1
     self.optimState = self.startState
     self.startState = deepcopy(self.startState)
-    self.AutoEncoder:setCriterion(nn.SequencerCriterion(nn.BCECriterion()))
+    self.AutoEncoder:setCriterion(nn.SequencerCriterion(nn.MSECriterion()))
   end
 
 	return self.epoch > self.epochLimit or (self.TrainAuto and self.layer > self.layerCount)

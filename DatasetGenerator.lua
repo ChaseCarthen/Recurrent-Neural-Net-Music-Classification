@@ -99,6 +99,7 @@ if directory ~= nil then
                 ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
             elseif format == "wav" or format == "au" then
                 ad:loadIntoSpectrogram(params.windowSize,params.stride)
+		ad.audio = ad.audio:t()
             end
         end
         print(ad.file .. "DONE")
