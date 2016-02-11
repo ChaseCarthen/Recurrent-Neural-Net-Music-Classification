@@ -7,6 +7,8 @@ require 'image'
 require 'audio'
 require 'gnuplot'
 require 'StackedAutoEncoder'
+require 'writeMidi'
+
 function tensorToNumber(tensor)
   local number = 0
   --print(tensor)
@@ -19,15 +21,14 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/ashover_simple_chords_10.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed2/train/reggae.00001.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 print(data.audio:sum())
 model = torch.load('./train.model')
 auto = torch.load('./auto.model')
 
-data2 = data.audio:float():split(100)
-data3 = data.midi:float():split(100)
+data2 = image.minmax{tensor=data.audio}:float():split(100)
 out = {}
 
 
@@ -59,5 +60,11 @@ end
 out = join:forward(out):clone()
 
 image.save('test.pgm',image.scale(out:round(),1000,1000 ) )
-image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
+
+
+writeMidi('test.midi',out,10,100)
+
+if data.midi ~= nil then
+  image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
+end
 

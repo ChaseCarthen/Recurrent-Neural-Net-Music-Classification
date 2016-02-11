@@ -48,7 +48,7 @@ print ("write Midi ")
   pianoRoll[i][j] = 0
   --print(i-from)
   to = i
-  my_score[2][counter]={'note',(from)*sampleRate,(to-from+1)*noteLength,1,j,pianoRoll[from][j]}
+  my_score[2][counter]={'note',(from)*sampleRate,(to-from+1)*noteLength,1,j,127}
   counter = counter + 1
   note_on = false
   end 
