@@ -88,7 +88,8 @@ function Trainer:splitData(data)
     target = target:sub(2,40000)
   end
   input = image.minmax{tensor=input}:split(self.dataSplit)
-  target = target:split(self.dataSplit)   
+  target = target:split(self.dataSplit) 
+  print(input)  
   return input,target
 end
 
