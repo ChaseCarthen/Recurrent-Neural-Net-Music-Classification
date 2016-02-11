@@ -21,7 +21,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed2/train/reggae.00001.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/test/hpps_simple_chords_46.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 print(data.audio:sum())
