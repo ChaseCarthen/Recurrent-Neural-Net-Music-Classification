@@ -15,7 +15,7 @@
   model = RNNC() 
 
   inmodel = nn.Sequential()
-  inmodel:add(nn.FastLSTM(32,500))
+  inmodel:add(nn.FastLSTM(1281,500))
   --inmodel:add(nn.Dropout())
   if not params.temporalconv then 
     model:addlayer(nn.Sequencer(inmodel))
@@ -32,10 +32,11 @@
     model:printmodel()
 
 
+
   criterion = nn.BCECriterion(nil,false)
 
   optimState = {
-    learningRate = 0.005,
+    learningRate = 0.001,
     --weightDecay = 0.01,
     --momentum = .01,
     --learningRateDecay = 1e-7

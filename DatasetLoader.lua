@@ -20,6 +20,8 @@ function loadListData(input,target,list,start,limit,shufflelist)
 				outdata[counter] = temp
 				counter = counter + 1
 				--print("loaded")
+			else
+				-- not loaded
 			end
 	end
 

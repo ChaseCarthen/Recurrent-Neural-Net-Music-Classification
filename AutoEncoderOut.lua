@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed2/train/jazz.00001.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed/test/ashover_simple_chords_9.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
@@ -29,10 +29,15 @@ data2 = image.minmax {tensor=data.audio:float() }:split(100)
 out2 = {}
 
 out3 = {}
+
+data2[#data2] = nil
+
+print(data2)
+
+out2 = model:forward(1,data2,false)
+
 for i = 1,#data2 do
 	print(data2[i]:size())
-	out2[i] = model:forward(1,{data2[i]},false)[1]:clone()
-	print(out2[i]:size())
 	print(out2[i]:max())
 	print(out2[i]:min())
 	print(out2[i]:mean())

@@ -8,6 +8,7 @@ require 'audio'
 require 'gnuplot'
 require 'StackedAutoEncoder'
 require 'writeMidi'
+require 'audio'
 
 function tensorToNumber(tensor)
   local number = 0
@@ -21,7 +22,8 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/test/hpps_simple_chords_46.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed/train/ashover_simple_chords_1.dat')
+
 print(data.samplerate)
 join = nn.JoinTable(1)
 print(data.audio:sum())
@@ -59,12 +61,12 @@ end
 
 out = join:forward(out):clone()
 
-image.save('test.pgm',image.scale(out:round(),1000,1000 ) )
+image.save('modelout.png',image.scale(image.minmax{tensor=out:round()},1000,1000 ) )
 
 
 writeMidi('test.midi',out,10,100)
 
 if data.midi ~= nil then
-  image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
+  image.save('midi.png',image.scale(image.minmax{tensor=data.midi},1000,1000))
 end
 

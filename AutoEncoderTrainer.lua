@@ -175,7 +175,7 @@ function AutoEncoderTrainer:train()
                            if self.training then
                             if not self.AutoEncoder then
                               if x ~= self.model:getParameters() then
-                                print (x)
+                                --print (x)
                                 self.model:getParameters():copy(x)
                               end
                               --print (self.model)
@@ -183,7 +183,7 @@ function AutoEncoderTrainer:train()
                               self.model:getGradParameters():zero()
                               else
                                 if x ~= self.model:getParameters(self.layer) then
-                                  print (x)
+                                  --print (x)
                                   self.AutoEncoder:getParameters(self.layer):copy(x)
                                 end
                                 --print (self.model)
@@ -240,7 +240,7 @@ function AutoEncoderTrainer:train()
                            --print(t)
                            if not self.TrainAuto then
                             tempinput = self.AutoEncoder:forward(1,input,false)
-                            
+
                             for i=1,#input do
                               input[i] = input[i] - tempinput[i]
                             end
@@ -277,7 +277,7 @@ function AutoEncoderTrainer:train()
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
-                            f = f + err
+                            f = f + err --/ (#input*input[1]:size(1))
 
                            
                           

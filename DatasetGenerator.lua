@@ -49,18 +49,37 @@ if directory ~= nil then
     paths.mkdir(testpath)
     paths.mkdir(wavpath)
     
-    
+    audiofilelist = {}
     for file in paths.iterfiles(paths.concat(directory,dir)) do
-        print(file)
-        if not params.spectrogram then
-            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="audio"}
-        else
-            ad = audiodataset{file=paths.concat(directory,dir,file),classname=dir,type="spectrogram"}
+        ad = nil
+        ext = paths.extname(file)
+        basename = paths.basename(file,ext)
+        if ext == "wav" or ext == "au" then
+            ad = audiodataset{audiofile = paths.concat(directory,dir,file) }
+        elseif ext == 'mid' or ext == 'midi' then
+            ad = audiodataset{midifile = paths.concat(directory,dir,file) }
         end
-
-        counter = counter + 1
-        audiolist[counter] = ad
+        
+        if ad ~= nil and audiofilelist[basename] == nil then
+            audiofilelist[basename] = ad
+        elseif ad ~= nil then
+            if ext == "wav" or ext == "au" then
+                audiofilelist[basename].audiofile = paths.concat(directory,dir,file)
+            elseif ext == 'mid' or ext == 'midi' then
+                audiofilelist[basename].midifile = paths.concat(directory,dir,file)
+            end
+        end
     end
+
+    for key,value in pairs(audiofilelist) do
+        counter = counter + 1
+        print("===========")
+        print(value.audiofile)
+        print(value.midifile)
+        print("===========")
+        audiolist[counter] = value
+    end
+
     total = #audiolist
     numTrain = math.floor(trainsplit * #audiolist)
     numTest = math.floor(testsplit * #audiolist)
@@ -85,24 +104,24 @@ if directory ~= nil then
         -- now we decided what to load here...
         if not params.spectrogram then
             -- Call midi function
-            format = paths.extname(ad.file)
-            if format == "mid" then
+            m = ad.midifile ~= nil
+            if m then
                 ad:loadAudioMidi(nil,wavpath)
-            elseif format == "wav" or format == "au" then
+            else
                 ad:loadIntoBinaryFormat()
             end
             --ad:generateImage()
         else
             -- Load spectrogram representation
-            format = paths.extname(ad.file)
-            if format == "mid" then
+            m = ad.midifile ~= nil
+            if m then
                 ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
-            elseif format == "wav" or format == "au" then
+            else
                 ad:loadIntoSpectrogram(params.windowSize,params.stride)
-		ad.audio = ad.audio:t()
+                ad.audio = ad.audio:t()
             end
         end
-        print(ad.file .. "DONE")
+        print("DONE")
         -- decide which path to place it
         if traincounter < numTrain then 
             ad:serialize(trainpath)
