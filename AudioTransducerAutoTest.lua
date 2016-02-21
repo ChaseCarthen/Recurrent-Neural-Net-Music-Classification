@@ -61,11 +61,12 @@ end
 
 out = join:forward(out):clone()
 
-image.save('modelout.png',image.scale(image.minmax{tensor=out:round()},1000,1000 ) )
+--out:mul(2)
+image.save('modelout.png',image.scale(image.minmax{tensor=out},1000,1000 ) )
 
 
-writeMidi('test.midi',out,10,100)
-
+writeMidi('test.midi',out:round(),1.0/data.samplerate*1000 ,1.0/data.samplerate*1000 )
+print(1.0/data.samplerate*1000)
 if data.midi ~= nil then
   image.save('midi.png',image.scale(image.minmax{tensor=data.midi},1000,1000))
 end

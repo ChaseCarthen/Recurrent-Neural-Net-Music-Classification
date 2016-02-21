@@ -108,7 +108,7 @@ print ('fmeasure: ' .. fmeasure)
 end
 
 
-dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed','audio','midi')
+dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/PolinerProcessed','audio','midi')
 
 print('train')
  dl:loadTraining()

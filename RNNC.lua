@@ -36,6 +36,10 @@ end
 function RNNC:initParameters()
   if self.model then
     self.parameters,self.gradParameters = self.model:getParameters()
+    --self.parameters:zero()
+    print("PARAMETERS")
+    print(self.parameters:max())
+    print(self.parameters:min())
   end
 end
 

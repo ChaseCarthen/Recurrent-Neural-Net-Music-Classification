@@ -202,7 +202,7 @@ end
 
 -- A file opening function -- for getting the correct
 openMidi = function(filename)
-
+foundNote = false
 local f = assert(io.open(filename, "r"))
 local t = f:read("*all")
 if t == nil then
@@ -233,6 +233,7 @@ do
         --print ("Note Begin: " .. v2[2])
         --print ("Note Duration: " .. v2[3])
         --print ("Note: " .. v2[5])
+        foundNote = true
       end
 
     end
@@ -241,12 +242,12 @@ do
 
 
 end
-
+print(m)
 print("MERGE SORT")
 
 out = NoteMergeSort(notes)[1]
 --print(notes)
-return out
+return out,foundNote
 end 
 
 -- A function for generating a target vector in two forms

@@ -36,7 +36,8 @@
   criterion = nn.BCECriterion(nil,false)
 
   optimState = {
-    learningRate = 0.001,
+  --eps=1e-3,
+    --learningRate = 0.005,
     --weightDecay = 0.01,
     --momentum = .01,
     --learningRateDecay = 1e-7

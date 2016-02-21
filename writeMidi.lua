@@ -4,9 +4,10 @@
  function writeMidi(fileName,pianoRoll,sampleRate,noteLength)
 print ("write Midi ")
  local my_score = {
-    96,  -- ticks per beat
+    sampleRate,  -- ticks per beat
     {    -- first track
           {'patch_change', 0, 1, 6},
+          {'set_tempo', 0, sampleRate*1000},
         --{'patch_change', 0, 1, 6},
         --{'note', 5, 500, 1, 25, 98},
         --{'note', 101, 500, 1, 29, 98},
@@ -30,7 +31,7 @@ print ("write Midi ")
  local note_on = false
  local to = 0
  local from = 0
- local counter = 2
+ local counter = 3
  for j=1,128 do 
   print(i)
  for i=1,pianoRoll:size(1) do
