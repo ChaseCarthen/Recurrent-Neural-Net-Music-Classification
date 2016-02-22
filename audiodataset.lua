@@ -59,7 +59,11 @@ end
 -- make this load the notes of the midi in 
 -- save the target vector generation for later
 function audiodataset:loadAudioMidi(filename,wavdirectory)
-	notes = openMidi(self.midifile)
+	notes,status = openMidi(self.midifile)
+	if not status then
+		print("THERE WERE NO NOTES IN THIS MIDI")
+		return false
+	end
 	directory = paths.dirname(self.midifile)
 	filebase = paths.basename(self.midifile,"mid")
 
@@ -71,10 +75,15 @@ function audiodataset:loadAudioMidi(filename,wavdirectory)
 	self.audio,self.midi,self.samplerate = generateMidiTargetVector(self.audiofile,notes)
 	self.file = wavdirectory .. "/" .. filebase 
 	self.audio = applyToTensor(self.audio:t()[1])
+	return true
 end
 
 function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,stride)
-	notes = openMidi(self.midifile)
+	notes,status = openMidi(self.midifile)
+	if not status  then
+		print("THERE WERE NO NOTES IN THIS MIDI")
+		return false
+	end
 	directory = paths.dirname(self.midifile)
 	filebase = paths.basename(self.midifile,"mid")
 	
@@ -87,6 +96,7 @@ function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,strid
 	-- Generate spectrogram and set the audio field
 	self:loadIntoSpectrogram(windowSize,stride)
 	self.audio,self.midi,self.samplerate = generateMidiSpectrogramVector(self.audio,self.samplerate,notes)
+	return true
 end
 
 

@@ -229,10 +229,10 @@ do
         notes[iteration] = {}
         notes[iteration]["NoteBegin"] = v2[2]
         notes[iteration]["NoteDuration"] = v2[3]
-        notes[iteration]["Note"] = v2[5]
+        notes[iteration]["Note"] = v2[5] + 1
         --print ("Note Begin: " .. v2[2])
         --print ("Note Duration: " .. v2[3])
-        --print ("Note: " .. v2[5])
+
         foundNote = true
       end
 
@@ -242,8 +242,8 @@ do
 
 
 end
-print(m)
-print("MERGE SORT")
+--print(m)
+--print("MERGE SORT")
 
 out = NoteMergeSort(notes)[1]
 --print(notes)
@@ -274,7 +274,6 @@ function generateMidiTargetVector(filename,notes)
       --print(to)
     for j =from,to do
       --print("set")
-      --print(notes[i].Note)
       binVector[notes[i].Note][j] = 1
     end
     --print(i)
@@ -306,7 +305,7 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
 
   for i=1,#notes do
     --print(notes[i].NoteBegin)
-    from = math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1
+    from = math.min( math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1, data:size(1))
     to = math.min ( math.floor((notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0) * samplerate)+1, data:size(1))
         --print(from)
       --print(to)

@@ -99,6 +99,7 @@ if directory ~= nil then
     print(numTest)
     print(numValidation)
     while #audiolist > 0 do
+        local status = false
         ad = audiolist[#audiolist]
         audiolist[#audiolist] = nil
         -- now we decided what to load here...
@@ -107,33 +108,40 @@ if directory ~= nil then
             m = ad.midifile ~= nil
             if m then
                 ad:loadAudioMidi(nil,wavpath)
+                status = true
             else
                 ad:loadIntoBinaryFormat()
+                status = true
             end
             --ad:generateImage()
         else
             -- Load spectrogram representation
             m = ad.midifile ~= nil
             if m then
-                ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
+               status =  ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
             else
-                ad:loadIntoSpectrogram(params.windowSize,params.stride)
-                ad.audio = ad.audio:t()
+               status = ad:loadIntoSpectrogram(params.windowSize,params.stride)
+                --ad.audio = ad.audio:t()
             end
         end
-        print("DONE")
+        
         -- decide which path to place it
-        if traincounter < numTrain then 
-            ad:serialize(trainpath)
-            traincounter = traincounter + 1
-        elseif testcounter < numTest then
-            ad:serialize(testpath)
-            testcounter = testcounter + 1
+        if status then
+            if traincounter < numTrain then 
+                ad:serialize(trainpath)
+                traincounter = traincounter + 1
+            elseif testcounter < numTest then
+                ad:serialize(testpath)
+                testcounter = testcounter + 1
+            else
+                validcounter = validcounter + 1
+                ad:serialize(validpath)
+            end
+            collectgarbage()
+            print("DONE")
         else
-            validcounter = validcounter + 1
-            ad:serialize(validpath)
+            print("NOT LOADING")
         end
         collectgarbage()
-    end
   end
-
+end
