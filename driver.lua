@@ -1,4 +1,9 @@
-require 'RNNC'
+--- driver.lua 
+--- Author: Chase Carthen
+--- Description: A driver used for training the models I have attempted to build
+--- 
+
+require 'Model/RNNC'
 local torch = require 'torch'
 require "nn"
 local midi = require 'MIDI'
@@ -11,14 +16,14 @@ require 'torch'
 require 'rnn'
 require 'image'
 require 'dpnn'
-require 'model'
 require 'writeMidi'
 require 'Trainer'
-require 'AutoEncoder'
-require 'BinaryClassReward'
+require 'Model/AutoEncoder'
+require 'Model/BinaryClassReward'
 require 'AutoEncoderTrainer'
-require 'StackedAutoEncoder'
-require 'TestLSTM'
+require 'Model/StackedAutoEncoder'
+
+
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
 cmd:text()
@@ -75,7 +80,7 @@ function tensorToNumber(tensor)
   return number
 end
 
---[[if cuda
+if cuda
 then
 	print("CUNN")
   require 'cutorch'
@@ -84,7 +89,7 @@ then
     params.GPU = 1
   end
   cutorch.setDevice(params.GPU)
-end]]
+end
 
 local math = require 'math'
 

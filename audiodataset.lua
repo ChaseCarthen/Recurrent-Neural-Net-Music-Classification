@@ -59,7 +59,7 @@ end
 -- make this load the notes of the midi in 
 -- save the target vector generation for later
 function audiodataset:loadAudioMidi(filename,wavdirectory)
-	notes,status = openMidi(self.midifile)
+	status,notes = pcall(openMidi,self.midifile)
 	if not status then
 		print("THERE WERE NO NOTES IN THIS MIDI")
 		return false
@@ -79,7 +79,7 @@ function audiodataset:loadAudioMidi(filename,wavdirectory)
 end
 
 function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,stride)
-	notes,status = openMidi(self.midifile)
+	status,notes = pcall(openMidi,self.midifile)
 	if not status  then
 		print("THERE WERE NO NOTES IN THIS MIDI")
 		return false
@@ -89,14 +89,19 @@ function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,strid
 	
 	if self.audiofile == nil then
 		print(wavdirectory .. "/" .. filebase .. '.wav')
-		generateWav(self.midifile,wavdirectory .. "/")
+		okay = pcall(generateWav,self.midifile,wavdirectory .. "/")
+		if not okay then
+			return false
+		end
 		self.audiofile = wavdirectory .. "/" .. filebase .. '.wav'
 	end
 
 	-- Generate spectrogram and set the audio field
-	self:loadIntoSpectrogram(windowSize,stride)
-	self.audio,self.midi,self.samplerate = generateMidiSpectrogramVector(self.audio,self.samplerate,notes)
-	return true
+	if not self:loadIntoSpectrogram(windowSize,stride) then
+		return false
+	end
+	okay,self.audio,self.midi,self.samplerate = pcall(generateMidiSpectrogramVector,self.audio,self.samplerate,notes)
+	return okay
 end
 
 
@@ -116,7 +121,10 @@ function audiodataset:loadIntoSTFT(windowSize,stride)
 end
 
 function audiodataset:loadIntoSpectrogram(windowSize,stride)
-	self.audio,self.samplerate = audio.load(self.audiofile)
+	okay,self.audio,self.samplerate = pcall(audio.load,self.audiofile)
+	if not okay then
+		return false
+	end
 	totaltime = self.audio:size(1) * 1.0/self.samplerate
 	self.numsamples = self.audio:size(1)
 	self.audio = audio.spectrogram(self.audio,windowSize,'hann',stride)
@@ -124,6 +132,7 @@ function audiodataset:loadIntoSpectrogram(windowSize,stride)
 
 	--print(self.audio:size())
 	collectgarbage()
+	return true
 end
 
 function audiodataset:loadIntoRaw()

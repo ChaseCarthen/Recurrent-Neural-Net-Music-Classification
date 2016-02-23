@@ -1,0 +1,175 @@
+miniMusic/classical/.DS_Store
+miniMusic/classical/013705b_.mid
+miniMusic/classical/013705ch.mid
+miniMusic/classical/013806b_.mid
+miniMusic/classical/013906b_.mid
+miniMusic/classical/014001b_.mid
+miniMusic/classical/015105b_.mid
+miniMusic/classical/015301b_.mid
+miniMusic/classical/015305b_.mid
+miniMusic/classical/015309b_.mid
+miniMusic/classical/015403b_.mid
+miniMusic/classical/015408b_.mid
+miniMusic/classical/015505b_.mid
+miniMusic/classical/015606b_.mid
+miniMusic/classical/015705b_.mid
+miniMusic/classical/015804b_.mid
+miniMusic/classical/015905b_.mid
+miniMusic/classical/016106b_.mid
+miniMusic/classical/016206blpz.mid
+miniMusic/classical/016406b_.mid
+miniMusic/classical/016506b_.mid
+miniMusic/classical/017206b_.mid
+miniMusic/classical/017206ch.mid
+miniMusic/classical/017206vn.mid
+miniMusic/classical/017405b_.mid
+miniMusic/classical/017507b_.mid
+miniMusic/classical/017507ch.mid
+miniMusic/classical/017606b_.mid
+miniMusic/classical/017705b_.mid
+miniMusic/classical/017807b_.mid
+miniMusic/classical/017906b_.mid
+miniMusic/classical/018007b_.mid
+miniMusic/classical/018305b_.mid
+miniMusic/classical/018405b_.mid
+miniMusic/classical/018405unk.mid
+miniMusic/classical/018506b_.mid
+miniMusic/classical/018707b_.mid
+miniMusic/classical/018806b_.mid
+miniMusic/classical/019007b_.mid
+miniMusic/classical/019007binst.mid
+miniMusic/classical/019406b_.mid
+miniMusic/country/16th_avenue_rt.mid
+miniMusic/country/57_chev_kj.mid
+miniMusic/country/80s_ladies_rt.mid
+miniMusic/country/a_bar_with_no_beer_r1_rt_kar.mid
+miniMusic/country/a_cowboy_out_of_my_time_kar_mj2.mid
+miniMusic/country/a_daisy_a_day_r1_rt.mid
+miniMusic/country/a_headache_tomorrow(mickey_gilley)kar_rt.mid
+miniMusic/country/a_little_mark_music_bhm.mid
+miniMusic/country/a_love_so_beautiful_gp.mid
+miniMusic/country/absence_of_the_heart-deana carter-kar_rt.mid
+miniMusic/country/ace_in_the_hole_dp.mid
+miniMusic/country/achy_breaky_heart_jsak.mid
+miniMusic/country/adieu_chet_hg.mid
+miniMusic/country/adios_amigo_jjd_kar.mid
+miniMusic/country/aint_misbehavin_rj.mid
+miniMusic/country/alabama_jubilee_mj3.mid
+miniMusic/country/all_alone_am_i_gp.mid
+miniMusic/country/all_for_the_love_of_a_girl_ccm_kar.mid
+miniMusic/country/all_my_friends_are_gonna_be_strangers_gc.mid
+miniMusic/country/all_thumbs_ym.mid
+miniMusic/country/alleycat_bb10.mid
+miniMusic/country/allhat_es.mid
+miniMusic/country/allmyxes.mid
+miniMusic/country/almost_persuaded_ht.mid
+miniMusic/country/alone_with_you-kar_gr.mid
+miniMusic/country/always_on_my_mind_jlh.mid
+miniMusic/country/always_on_my_mind_jrb.mid
+miniMusic/country/am_i_losing_you_pw.mid
+miniMusic/country/am_i_that_easy_to_forget_pw_kar.mid
+miniMusic/country/amarillo.mid
+miniMusic/country/amarillo_by_morning_da.mid
+miniMusic/country/amazed_kar_wr.mid
+miniMusic/country/amos_moses_rt.mid
+miniMusic/country/an_old_pair_of_shoes_rt_kar.mid
+miniMusic/country/angel_flying_too_close_to_the_ground_pw.mid
+miniMusic/country/angel_of_the_morning_dj2.mid
+miniMusic/country/annies_song_pw.mid
+miniMusic/country/another_somebody_done_pw.mid
+miniMusic/country/any_day_now_gm_mdm.mid
+miniMusic/country/anytime_wc.mid
+miniMusic/jazz/001-A Fine-1.mid
+miniMusic/jazz/002-A Fine-2.mid
+miniMusic/jazz/003-A Ghost Of A Chance.mid
+miniMusic/jazz/004-A House Is.mid
+miniMusic/jazz/005-A Nighting.mid
+miniMusic/jazz/006-A Remark You Made.mid
+miniMusic/jazz/007-A Sleepin- Bee.mid
+miniMusic/jazz/008-Accustomed.mid
+miniMusic/jazz/009-After You.mid
+miniMusic/jazz/01-Backch (Bennie Gunn) .mid
+miniMusic/jazz/010-Alabama.mid
+miniMusic/jazz/011-Alfie.mid
+miniMusic/jazz/012-Alice In Wonderland.mid
+miniMusic/jazz/013-All The Things 2.mid
+miniMusic/jazz/014-All The Things Reharmonized.mid
+miniMusic/jazz/015-All The Things You Are.mid
+miniMusic/jazz/016-Alone Together.mid
+miniMusic/jazz/017-Answer Me My Love.mid
+miniMusic/jazz/018-Ask Me Now 2.mid
+miniMusic/jazz/019-Autumn In Ny.mid
+miniMusic/jazz/02-Chan's song (Herbie Hancock).mid
+miniMusic/jazz/020-Autumn Leaves.mid
+miniMusic/jazz/03-Chantelle (Bennie Gunn).mid
+miniMusic/jazz/04-Cloud Whisper (Bennie Gunn).mid
+miniMusic/jazz/05-Come Dance with Me (Jimmy van Heusen).mid
+miniMusic/jazz/06-Con Alma (Dizzy Gillespie).mid
+miniMusic/jazz/07-Dolphin Dance (Herbie Hancock).mid
+miniMusic/jazz/08-Elljira (Bennie Gunn).mid
+miniMusic/jazz/09-Flying Down Home (Bennie Gunn).mid
+miniMusic/jazz/10-Foreplay (Lee Ritenour).mid
+miniMusic/jazz/11-How's This for Openers (Bennie Gunn).mid
+miniMusic/jazz/12-I Remember Clifford (Bennie Golson).mid
+miniMusic/jazz/13-I Won't Dance (Jerome Kern).mid
+miniMusic/jazz/14-In a Sentimental Mood (Duke Ellington)..mid
+miniMusic/jazz/15-Judy's Peaceful Place (Bennie Gunn).mid
+miniMusic/jazz/16-Maiden Voyage (Herbie Hancock).mid
+miniMusic/jazz/17-Nica's Dream (Horace Silver).mid
+miniMusic/jazz/18-Seven Steps To Heaven (Miles Davis).mid
+miniMusic/jazz/19-She Could Be Mine (Dave Grusin).mid
+miniMusic/jazz/20-Still Time (Herbie Hancock).mid
+miniMusic/rock/a_little_bit_me_a_little_bit_you.mid
+miniMusic/rock/a_song_for_you.mid
+miniMusic/rock/acrossu.mid
+miniMusic/rock/actnatur.mid
+miniMusic/rock/africa.mid
+miniMusic/rock/ahardday.mid
+miniMusic/rock/alligot.mid
+miniMusic/rock/allmylove.mid
+miniMusic/rock/andilove.mid
+miniMusic/rock/anna.mid
+miniMusic/rock/anotherg.mid
+miniMusic/rock/anytime.mid
+miniMusic/rock/askmewhy.mid
+miniMusic/rock/atasteof.mid
+miniMusic/rock/babe.mid
+miniMusic/rock/babyinbk.mid
+miniMusic/rock/babyitsu.mid
+miniMusic/rock/backussr.mid
+miniMusic/rock/bestoftimes.mid
+miniMusic/rock/bless_the_beasts_and_the_children.mid
+miniMusic/rock/blkbird.mid
+miniMusic/rock/bluecollarman.mid
+miniMusic/rock/boys.mid
+miniMusic/rock/breaking_up_is_hard_to_do.mid
+miniMusic/rock/bungbill.mid
+miniMusic/rock/cant_smile_without_you.mid
+miniMusic/rock/cantbuy.mid
+miniMusic/rock/chains.mid
+miniMusic/rock/childsanthem.mid
+miniMusic/rock/close_to_you.mid
+miniMusic/rock/comesail.mid
+miniMusic/rock/day_we_fall_in_love.mid
+miniMusic/rock/daydream_believer.mid
+miniMusic/rock/dearprud.mid
+miniMusic/rock/breaking_up_is_hard_to_do.mid
+miniMusic/rock/bungbill.mid
+miniMusic/rock/cant_smile_without_you.mid
+miniMusic/rock/cantbuy.mid
+miniMusic/rock/chains.mid
+miniMusic/rock/childsanthem.mid
+miniMusic/rock/close_to_you.mid
+miniMusic/rock/comesail.mid
+miniMusic/rock/day_we_fall_in_love.mid
+miniMusic/rock/daydream_believer.mid
+miniMusic/rock/dearprud.mid
+miniMusic/rock/desperado.mid
+miniMusic/rock/devilin.mid
+miniMusic/rock/digit.mid
+miniMusic/rock/dizzlizz.mid
+miniMusic/rock/dntleten.mid
+miniMusic/rock/dontboth.mid
+miniMusic/rock/dontpass.mid
+miniMusic/rock/door_into_summer.mid
+

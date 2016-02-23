@@ -1,0 +1,10 @@
+*.tar.gz
+*.au
+*.midi
+*.pgm
+*.jpg
+*.jpeg
+*.wav
+*.zip
+*.dat
+Data/

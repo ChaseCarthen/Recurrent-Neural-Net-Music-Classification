@@ -118,7 +118,7 @@ if directory ~= nil then
             -- Load spectrogram representation
             m = ad.midifile ~= nil
             if m then
-               status =  ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
+               status = ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
             else
                status = ad:loadIntoSpectrogram(params.windowSize,params.stride)
                 --ad.audio = ad.audio:t()
