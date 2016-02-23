@@ -15,16 +15,16 @@
   model = RNNC() 
 
   inmodel = nn.Sequential()
-  inmodel:add(nn.GRU(1281,500))
+  inmodel:add(nn.FastLSTM(1281,500))
   --inmodel:add(nn.Dropout())
   if not params.temporalconv then 
-    model:addlayer(nn.Sequencer(inmodel))
+    --model:addlayer(nn.Sequencer(inmodel))
   else
     model:addlayer(nn.Sequencer(nn.GRU(32,80)))
     model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
   end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(500,128)):add(nn.Sigmoid()) ))
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(1281,128)):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       
@@ -33,7 +33,7 @@
 
 
 
-  criterion = nn.BCECriterion(nil,false)
+  criterion = nn.BCECriterion()--nil,false)
 
   optimState = {
   --eps=1e-3,

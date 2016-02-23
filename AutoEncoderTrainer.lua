@@ -321,14 +321,14 @@ function AutoEncoderTrainer:train()
 
    end -- End of while loop
 
-   print("LOSS: " .. loss/count)
+   print("LOSS: " .. loss)--/count)
    --print(confusion)
 
    -- next epoch
    --confusion:zero()
    self.epoch = self.epoch + 1
 
-   return (loss/count)
+   return (loss)--/count)
 end
 
 function AutoEncoderTrainer:setLayer(layer)
