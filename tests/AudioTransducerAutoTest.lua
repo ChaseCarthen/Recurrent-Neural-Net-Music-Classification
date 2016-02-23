@@ -1,12 +1,12 @@
-require 'AutoEncoder'
-require 'RNNC'
+require 'Model/AutoEncoder'
+require 'Model/RNNC'
 require 'cunn'
 require 'rnn'
 require 'audiodataset'
 require 'image'
 require 'audio'
 require 'gnuplot'
-require 'StackedAutoEncoder'
+require 'Model/StackedAutoEncoder'
 require 'writeMidi'
 require 'audio'
 
@@ -61,7 +61,7 @@ end
 out = join:forward(out):clone()
 
 --out:mul(2)
-image.save('modelout.png',image.scale(image.minmax{tensor=out},1000,1000 ) )
+image.save('modelout.png',image.scale(image.minmax{tensor=out:round()},1000,1000 ) )
 
 
 writeMidi('test.midi',out:round(),1.0/data.samplerate*1000 ,1.0/data.samplerate*1000 )

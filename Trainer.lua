@@ -89,7 +89,7 @@ function Trainer:splitData(data)
   end
   input = image.minmax{tensor=input}:split(self.dataSplit)
   target = target:split(self.dataSplit) 
-  print(input)  
+  --print(input)  
   return input,target
 end
 

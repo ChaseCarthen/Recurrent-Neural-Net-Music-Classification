@@ -1,8 +1,47 @@
 samplerate = 22050
-windowsize = 8192
+windowsize = 2560
+a = 440
+require 'Model/RNNC'
+local torch = require 'torch'
+require "nn"
+local midi = require 'MIDI'
+require "optim"
+require "midiToBinaryVector"
+require 'DatasetLoader'
+require 'lfs'
+require 'math'
+require 'torch'
+require 'rnn'
+require 'image'
+require 'dpnn'
+require 'Model/model'
+require 'writeMidi'
+require 'Trainer'
+require 'Model/AutoEncoder'
+require 'Model/BinaryClassReward'
+require 'AutoEncoderTrainer'
+require 'Model/StackedAutoEncoder'
+require 'audio'
 require 'gnuplot'
 require 'image'
-a = 440
+require 'cunn'
+
+torch.setdefaulttensortype('torch.FloatTensor')
+cmd = torch.CmdLine()
+cmd:text()
+cmd:text()
+cmd:text("A music transcription neural network for going from midi to wav.")
+cmd:text()
+cmd:text('Options')
+cmd:option("-audiofile","","A wav file to processed.")
+cmd:option("-autoencoderfile","auto.model","The autoencoder file to be used.")
+cmd:option("-rnncfile","final.model","The translation model to be used.")
+cmd:option("-windowSize",2560,"Setting the window size for the fft.")
+cmd:option("-stride",1280,"Setting the stride for the window.")
+cmd:option("-midifileout","test.mid","Use this parameter to specify the midi output.")
+cmd:text()
+
+params = cmd:parse(arg or {})
 
 miditable = {}
 
@@ -14,66 +53,76 @@ function frequencyToBin(notefreq,samplerate,windowsize)
 	return torch.round(miditable[notefreq-1] / (samplerate/windowsize)/2 )
 end
 
+if params.audiofile == "" then
+	os.exit()
+end
 
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed3/train/ashover_simple_chords_12.dat')
-mid = data.midi
-data = data.audio
-max = 0
-for column= 1,data:size(1) do
+data,samplerate = audio.load(params.audiofile)
+automodel = torch.load(params.autoencoderfile)
+
+
+spectrogram = audio.spectrogram(data,params.windowSize,'hann',params.stride)
+
+
+
+spectrogram = image.minmax{tensor=spectrogram:t()}
+--print(spectrogram:size())
+--print(automodel.layer[1].encoder)
+
+
+songsplit = spectrogram:split(1000)
+
+join = nn.JoinTable(1)
+
+local output = {}
+for i=1,#songsplit do
+	--print(i)
+	local input = songsplit[i]:split(100)
+	--print(input)
+
+	if input[#input]:size(1) ~= 100 then
+		input[#input] = torch.cat(input[#input], torch.zeros(100 - input[#input]:size(1), input[#input]:size(2) ), 1 )
+	end
+
+	local out = automodel:forward(1,input,false )
+	for j =1,#out do
+		out[j] = (input[j] - out[j]):clone()
+	end
+	--print("-------------")
+	--print(out)
+	output[#output +1] = join:forward(out):clone()
+	--print("-------------output")
+	--print(output)
+end
+
+--print(output)
+
+
+
+output = join:forward(output)
+
+
+output = output:le(0.08)
+
+
+notes = torch.zeros(spectrogram:size(1),128)
+
+
+--print(samplerate)
+--print(spectrogram:size())
+for column= 1,spectrogram:size(1) do
 	for notefreq = 0,127 do
-		bin = data:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize)/2 )
-		val = data[column][bin]
-		if val > max then
-			max = val
-			print(data[column][bin])
-			--print(bin)
-			notefreq = notefreq + 1
-			print(notefreq)
-			for jj = 1, mid:size(1) do
-				if mid[jj][notefreq] > 0 then
-					print("Here")
-				end
-			end
-		end
-	end
-end
-
-print("=====================================================")
-print("=====================================================")
-print("=====================================================")
-print("=====================================================")
-print("=====================================================")
-
-
-notes = {}
-for column = 1, mid:size(1) do
-	for row = 1, mid:size(2) do
-		if mid[column][row] > 0 then
-			bin = data:size(2) - torch.round(miditable[row-1] / (samplerate/windowsize)/2 )
-			print("row " .. row .. " note: " .. data[column][bin])
-			print(data[column][bin-1])
-			print(data[column][bin])
-			print(data[column][bin+1])
-			print(data[column][bin+2])
-			notes[row] = row
-		end
+		bin = spectrogram:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize) )
+		--print(bin)
+		notes[column][notefreq+1] = 1-output[column][bin]
 	end
 end
 
 
-for key,value in pairs(notes) do
-	print(value)
-	bin = data:size(2) - frequencyToBin(value,samplerate,windowsize)
-	ten = torch.ones(data:size(1),1)
-	ten2 = torch.ones(data:size(1),1)
-	for column = 1, data:size(1) do
-		ten[column] = data[column][bin]
-		ten2[column] = 300*mid[column][value]
-	end
-	gnuplot.pngfigure('test' .. value .. '.png')
-	gnuplot.plot({tostring(value),ten}, {'notes',ten2})
-	gnuplot.plotflush()
-end
+image.save('testmidi.png',image.minmax{tensor=notes:round()})
 
 
-image.save('testmidi.png',image.minmax{tensor=mid})
+samplerate = (1.0/samplerate * data:size(1)) / spectrogram:size(1)
+
+
+writeMidi(params.midifileout,notes:round(),1.0/samplerate*8 ,1.0/samplerate*8 )

@@ -1,4 +1,4 @@
-  require 'RNNC'
+  require 'Model/RNNC'
   require 'rnn'
   if cuda
   then
@@ -15,7 +15,7 @@
   model = RNNC() 
 
   inmodel = nn.Sequential()
-  inmodel:add(nn.FastLSTM(1281,500))
+  inmodel:add(nn.GRU(1281,500))
   --inmodel:add(nn.Dropout())
   if not params.temporalconv then 
     model:addlayer(nn.Sequencer(inmodel))
