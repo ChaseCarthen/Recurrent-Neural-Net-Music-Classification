@@ -105,6 +105,11 @@ function AutoEncoderTrainer:__init(args)
   self.stepsize = args.stepsize or 1
   self.windowidth = args.windowidth or 1000
 
+  self.fn = 0
+  self.fp = 0
+  self.tn = 0
+  self.tp = 0
+
   -- applying normalization to inputs
   self.normalize = args.normalize or false
 end
@@ -138,7 +143,34 @@ function AutoEncoderTrainer:splitData(data)
 	return input,target
 end
 
+-- Expecting output and target to be tables
+function AutoEncoderTrainer:UpdateAccuracy(output,target)
+  for i = 1, #output do
+    local out = output[i]:clone():round()
+    local tar = target[i]:clone():round()
+    -- Calculate false negatives
+    self.fn = self.fn + (tar - out):eq(1):sum()
+
+    -- Calculate false positivess
+    self.fp = self.fp + (tar - out):eq(-1):sum()
+
+    -- calculate true positives
+    self.tp = self.tp + (tar + out):eq(2):sum()
+
+    -- calculate true negatives
+    self.tn  = self.tn + (tar + out):eq(0):sum()
+  end
+  --print(self.fn)
+  --print(self.tn)
+  --print(self.fp)
+  --print(self.tp)
+end
+
 function AutoEncoderTrainer:train()
+  self.fn = 0
+  self.fp = 0
+  self.tn = 0
+  self.tp = 0
 
    -- epoch tracker
    self.epoch = self.epoch or 1
@@ -163,7 +195,8 @@ function AutoEncoderTrainer:train()
    shuffle = torch.randperm(numTrain)
    done = false
    local loss = 0
-   count = 0
+   local count = 0
+
    while not done do
     data = self.datasetLoader:loadNextSet()
     
@@ -171,6 +204,7 @@ function AutoEncoderTrainer:train()
     local prevout = nil
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
+                          count = 0
                            -- get new parameters
                            if self.training then
                             if not self.AutoEncoder then
@@ -274,10 +308,11 @@ function AutoEncoderTrainer:train()
                             --print(self.layer)
                             --print(input)
                             err = self.model:backward(input,output,t)--inputs)
+                            self:UpdateAccuracy(output,t)
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
-                            f = f + err --/ (#input*input[1]:size(1))
+                            f = f + err --/ input[1]:size(1) --/ (#input*input[1]:size(1))
 
                            
                           
@@ -299,6 +334,7 @@ function AutoEncoderTrainer:train()
                             self.AutoEncoder:getGradParameters(self.layer):div(count)
                            end
                             f = f/count--#data
+                            --print("ORIG: " .. f)
                             --print(count)
                             if not self.TrainAuto then
                               return f,self.model:getGradParameters()
@@ -324,9 +360,21 @@ function AutoEncoderTrainer:train()
    print("LOSS: " .. loss)--/count)
    --print(confusion)
 
+
+   if not self.TrainAuto then
+    acc = self.tp / (self.tp + self.fn + self.fp)
+    pre = self.tp / (self.tp + self.fp)
+    rec = self.tp / (self.tp + self.fn)
+    fmeasure = (2 * pre * rec) / (pre + rec)
+    print("Accuracy: " .. acc)
+    print("Precision: " .. pre)
+    print("Recall: " .. rec)
+    print("F-Measure: " .. fmeasure)
+   end
    -- next epoch
    --confusion:zero()
-   self.epoch = self.epoch + 1
+
+   --self.epoch = self.epoch + 1
 
    return (loss)--/count)
 end

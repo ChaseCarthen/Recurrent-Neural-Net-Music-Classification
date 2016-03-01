@@ -1,8 +1,8 @@
-require 'AutoEncoder'
+require 'Model/AutoEncoder'
 require 'cunn'
 require 'rnn'
 require 'audiodataset'
-require 'StackedAutoEncoder'
+require 'Model/StackedAutoEncoder'
 require 'image'
 require 'audio'
 
@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed/test/ashover_simple_chords_9.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/PolinerProcessed/train/bach_847MINp_align.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 

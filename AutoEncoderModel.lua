@@ -1,5 +1,5 @@
-  require 'StackedAutoEncoder'
-  require 'AutoEncoder'
+  require 'Model/StackedAutoEncoder'
+  require 'Model/AutoEncoder'
   require 'rnn'
 
   if cuda

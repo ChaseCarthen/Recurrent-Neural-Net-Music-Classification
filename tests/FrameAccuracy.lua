@@ -1,12 +1,12 @@
-require 'AutoEncoder'
-require 'RNNC'
+require 'Model/AutoEncoder'
+require 'Model/RNNC'
 require 'cunn'
 require 'rnn'
 require 'audiodataset'
 require 'image'
 require 'audio'
 require 'gnuplot'
-require 'StackedAutoEncoder'
+require 'Model/StackedAutoEncoder'
 require 'writeMidi'
 require 'audio'
 require 'DatasetLoader'
@@ -108,7 +108,7 @@ print ('fmeasure: ' .. fmeasure)
 end
 
 
-dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/PolinerProcessed','audio','midi')
+dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/JSBrProcessed','audio','midi')
 
 print('train')
  dl:loadTraining()

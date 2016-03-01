@@ -131,9 +131,14 @@ criterion = nn.SequencerCriterion(criterion)
 model:setCriterion(criterion)
 model:initParameters()
 
+local dated = os.date()
+
 -- Add a datetime to this output later
-trainLogger = optim.Logger('train.log')
-trainLogger:setNames{'training error'}--, 'test error')
+trainLogger = optim.Logger('traintestGPU' .. params.GPU .. dated ..  '.log')
+trainLogger:setNames{'training error', 'test error'}
+
+validLogger = optim.Logger('validGPU' .. params.GPU .. dated ..  '.log')
+validLogger:setNames{'valid error'}
 
 
 if params.encoded then
@@ -166,13 +171,27 @@ while not train:done() do
     --train:validater()
     --train()
     --train:saveModel()
-    trainLogger:add{train:trainer()}
-    trainLogger:style{'-'}
-    --trainLogger:plot()
+    print("======= train ======")
+    local trainerror = train:trainer()
+    print("======= test =======")
+    local testerror = train:tester()
+    local validerror = 0
+    if train.epoch % params.savemodel == 0 then
+      print("====== valid ========")
+      validerror = train:validater()
+
+      validLogger:add{validerror}
+      validLogger:style{"-"}
+      validLogger:plot()
+    end
+    trainLogger:add{trainerror,testerror}
+    trainLogger:style{'-','-','-'}
+    trainLogger:plot()
     if train.epoch % params.savemodel == 0 then
         --test()
         train:saveModel()
     end
+    train.epoch = train.epoch + 1
 end
 
 

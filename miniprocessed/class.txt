@@ -1,4 +1,0 @@
-classical
-country
-jazz
-rock
