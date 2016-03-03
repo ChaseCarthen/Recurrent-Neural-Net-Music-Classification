@@ -1,11 +1,15 @@
-require 'AutoEncoder'
-require 'RNNC'
+require 'Model/AutoEncoder'
+require 'Model/RNNC'
 require 'cunn'
 require 'rnn'
 require 'audiodataset'
 require 'image'
 require 'audio'
 require 'gnuplot'
+require 'Model/StackedAutoEncoder'
+require 'writeMidi'
+require 'audio'
+
 function tensorToNumber(tensor)
   local number = 0
   --print(tensor)
@@ -18,62 +22,47 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/processed/train/ashover_simple_chords_10.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed/train/ashover_simple_chords_2.dat')
+
 print(data.samplerate)
 join = nn.JoinTable(1)
-
+print(data.audio:sum())
 model = torch.load('./train.model')
+auto = torch.load('./auto.model')
 
-data2 = data.audio:float():split(20000)
-data3 = data.midi:float():split(20000)
+data2 = data.audio:float():split(100)
 out = {}
 
-for i = 1,#data2 do
-  --print("=================")
-	--print(data2[i]:mean())
-  --print(model:forward({data2[i]}))
-	--model:forget()
-  d = data2[i]:split(100)
-  d[#d] = nil
-  --print(d)
-	out[i] = model:forward(d)
-  --print(out)
-	--print(model:forward({data2[i]})[1]:mean())
-  --print(out[i]:mean())
-  --print(data2[i]:mean())
+
+print(data2)
+
+--print(model:forward({data2[i]}))
+--model:forget()
+data2[#data2] = nil
+
+out = model:forward(data2)
+
+print(#out)
+print(#data2)
+
+for i = 1,#out do
+  print(out[i]:mean())
   --print(out[i]:size())
-  --print("=====================")
-  for j = 1,#out[i] do
-    --print(out[i])
-    
-    print("-------")
-    print(out[i][j]:mean())
-    --print(out[i][j]:size())
-    print(d[i][j]:mean())
-    if j > 1 then
-      print( "SUM: " .. (out[i][j] - past):sum() )
-      image.save('past' .. j .. '.pgm',image.scale(image.minmax{tensor=past - past},1000,1000 ) )
-    end
-    print("-------")
-    --print(out[i][j])
-    image.save('tests' .. i .. 'i' .. j .. 'j.pgm',image.scale(image.minmax{tensor=out[i][j]},1000,1000))
-    past = out[i][j]
-  end
-    --image.save('test' .. i .. '.pgm',image.scale(image.minmax{tensor=out[i]},1000,1000))
-    --image.save('testor' .. i .. '.pgm',image.scale(image.minmax{tensor=data3[i]},1000,1000) )
+  print(out[i]:max())
 end
 
 
-image.save ('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
---out = join:forward(out):clone()
---gnuplot.hist(out)
---print( (out:ge(.3) ):sum())
---print(data.midi:sum())
---out = out:round()
---print(out:max())
 
---print("done test")
---image.save('test2.pgm',image.scale(image.minmax{tensor=data.audio},1000,1000))
---print("done test2")
---image.save('test3.pgm',image.scale(image.minmax{tensor=out2},1000,1000))
---print("done test3")
+
+out = join:forward(out):clone()
+
+--out:mul(2)
+image.save('modelout.png',image.scale(image.minmax{tensor=out:round()},1000,1000 ) )
+
+
+writeMidi('test.midi',out:round(),1.0/data.samplerate*1000 ,1.0/data.samplerate*1000 )
+print(1.0/data.samplerate*1000)
+if data.midi ~= nil then
+  image.save('midi.png',image.scale(image.minmax{tensor=data.midi},1000,1000))
+end
+

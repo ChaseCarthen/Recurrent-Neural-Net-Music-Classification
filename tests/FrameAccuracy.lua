@@ -35,7 +35,7 @@ fn = 0
 fp = 0
 tn = 0
 tp = 0
-
+split = 50
 
 function calculateAccuracy()
   local fn2 = 0
@@ -51,11 +51,11 @@ while not done do
   for song= 1, #data do
     --print(data[song].samplerate)
     data2 = image.minmax{tensor=data[song].audio}:float()
-    data2 = data2:split(100)
-    data3 = data[song].midi:float():split(100)
-  if data2[#data2]:size(1) ~= 100 then
-    data2[#data2] = torch.cat(data2[#data2], torch.zeros(100 - data2[#data2]:size(1), data2[#data2]:size(2) ), 1 )
-    data3[#data2] = torch.cat(data3[#data3], torch.zeros(100 - data3[#data3]:size(1), data3[#data3]:size(2) ), 1 )
+    data2 = data2:split(split)
+    data3 = data[song].midi:float():split(split)
+  if data2[#data2]:size(1) ~= split then
+    data2[#data2] = torch.cat(data2[#data2], torch.zeros(split - data2[#data2]:size(1), data2[#data2]:size(2) ), 1 )
+    data3[#data2] = torch.cat(data3[#data3], torch.zeros(split - data3[#data3]:size(1), data3[#data3]:size(2) ), 1 )
   end
   input = auto:forward(1,data2,false )
   for j = 1,#input do
@@ -108,7 +108,7 @@ print ('fmeasure: ' .. fmeasure)
 end
 
 
-dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/JSBrProcessed','audio','midi')
+dl = DatasetLoader('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed','audio','midi')
 
 print('train')
  dl:loadTraining()

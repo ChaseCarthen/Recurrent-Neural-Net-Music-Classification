@@ -207,7 +207,8 @@ function AutoEncoderTrainer:train()
                           count = 0
                            -- get new parameters
                            if self.training then
-                            if not self.AutoEncoder then
+                            if not self.TrainAuto then
+                              --print("RESET")
                               if x ~= self.model:getParameters() then
                                 --print (x)
                                 self.model:getParameters():copy(x)
