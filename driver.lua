@@ -185,7 +185,7 @@ while not train:done() do
       validLogger:plot()
     end
     trainLogger:add{trainerror,testerror}
-    trainLogger:style{'-','-','-'}
+    trainLogger:style{'-','-'}
     trainLogger:plot()
     if train.epoch % params.savemodel == 0 then
         --test()

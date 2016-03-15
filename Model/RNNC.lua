@@ -88,6 +88,7 @@ function RNNC:backward(input,output,targets)
 
   local err = self.criterion:forward(output, targets) / input[1]:size(1)
   if self.mode ~= "test" then
+    print("TESTING")
     local df_do = self.criterion:backward(output, targets) 
     for i=1,#df_do do 
       df_do[i] = df_do[i] / input[1]:size(1)

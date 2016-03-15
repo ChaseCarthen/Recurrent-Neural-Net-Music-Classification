@@ -121,7 +121,7 @@ if directory ~= nil then
                status = ad:loadMidiSpectrogram(nil,wavpath,params.windowSize,params.stride)
             else
                status = ad:loadIntoSpectrogram(params.windowSize,params.stride)
-                --ad.audio = ad.audio:t()
+               ad.audio = ad.audio:t()
             end
         end
         

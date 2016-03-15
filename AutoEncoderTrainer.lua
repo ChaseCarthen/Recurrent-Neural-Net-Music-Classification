@@ -140,6 +140,12 @@ function AutoEncoderTrainer:splitData(data)
 
   input = input:split(self.dataSplit)
   target = target:split(self.dataSplit)
+  --print(data.audio:size())
+  --print(data.audiofile)
+  --print(data.midi:size())
+  --print(data.midifile)
+  --print(input)
+  --print(target)
 	return input,target
 end
 
@@ -202,6 +208,50 @@ function AutoEncoderTrainer:train()
     
    	done = data.done
     local prevout = nil
+
+                               -- evaluate function for complete mini batch
+                           for i = 1,#data do
+
+                            xlua.progress(i, #data)
+
+                           inputs,target = self:splitData(data[i])
+                           local out = {}
+                           for testl = 1,#inputs do
+
+                            if testl == 1 then
+                              prevout = nil
+                            end
+
+                            if not self.temporalconv then
+                              input = inputs[testl]:split(self.sequenceSplit)
+                            else
+                              input = TemporalSplit(inputs[testl], self.windowidth, self.stepsize)
+                            end
+
+                            if self.predict and prevout ~= nil then
+                              input = prevout
+                            end
+                            if not self.temporalconv then
+                              t = target[testl]:split(self.sequenceSplit)
+                            else
+                              t = TemporalSplit(target[testl], self.windowidth, self.stepsize)
+                            end
+
+                            -- Making sure the last split has the proper size for passing into a sequencer element.
+                            if testl == #inputs then
+                              if t[#t]:size(1) ~= self.sequenceSplit then
+                                t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
+                                if self.predict == false or prevout == nil then
+                                  input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+                                end
+                              end
+                            end
+                            if self.predict and #input ~= #t then
+                              for ij = #input,#t,-1 do
+                                input[ij] = nil
+                              end
+                            end
+
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
                           count = 0
@@ -229,48 +279,7 @@ function AutoEncoderTrainer:train()
 
                            -- f is the average of all criterions
                            local f = 0
-                           -- evaluate function for complete mini batch
-                           for i = 1,#data do
 
-                            xlua.progress(i, #data)
-
-                      	   inputs,target = self:splitData(data[i])
-                           local out = {}
-                           for testl = 1,#inputs do
-
-                            if testl == 1 then
-                              prevout = nil
-                            end
-
-                            if not self.temporalconv then
-                              input = inputs[testl]:split(self.sequenceSplit)
-                            else
-                              input = TemporalSplit(inputs[testl], self.windowidth, self.stepsize)
-                            end
-
-                            if self.predict and prevout ~= nil then
-                              input = prevout
-                            end
-                            if not self.temporalconv then
-                              t = target[testl]:split(self.sequenceSplit)
-                            else
-                              t = TemporalSplit(target[testl], self.windowidth, self.stepsize)
-                            end
-
-                            -- Making sure the last split has the proper size for passing into a sequencer element.
-                            if testl == #inputs then
-                            	if t[#t]:size(1) ~= self.sequenceSplit then
-                            		t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                                if self.predict == false or prevout == nil then
-                            		  input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
-                            		end
-                            	end
-                            end
-                            if self.predict and #input ~= #t then
-                              for ij = #input,#t,-1 do
-                                input[ij] = nil
-                              end
-                            end
 
                            --print(t)
                            if not self.TrainAuto then
@@ -313,28 +322,22 @@ function AutoEncoderTrainer:train()
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
+                           if not self.TrainAuto then
+                            err = err/ input[1]:size(1)
+                           end
                             f = f + err --/ input[1]:size(1) --/ (#input*input[1]:size(1))
 
                            
                           
-                        collectgarbage();
-                         end
-                         count = count + 1
-                         
-                        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-                            torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
-                        end  
-                            
-                        out = nil
-                           end
+                            --print(input[1]:size(1))
 
                            -- normalize gradients and f(X)
                            if self.training and not self.TrainAuto then
-                            self.model:getGradParameters():div(count)--#data)
+                            self.model:getGradParameters():div(input[1]:size(1) )--#data)
                            elseif self.training and self.TrainAuto then
-                            self.AutoEncoder:getGradParameters(self.layer):div(count)
+                            self.AutoEncoder:getGradParameters(self.layer)-- not necessary:div(input[1]:size(1) )
                            end
-                            f = f/count--#data
+                            --f = f/input[1]:size(1)--#data
                             --print("ORIG: " .. f)
                             --print(count)
                             if not self.TrainAuto then
@@ -343,7 +346,7 @@ function AutoEncoderTrainer:train()
                               return f,self.AutoEncoder:getGradParameters(self.layer)
                             end
 
-                end
+                end -- end feval
                 if self.training and not self.TrainAuto then
                   _,fs2 = self.optimModule(feval, self.model:getParameters(), self.optimState)
                   loss = loss + fs2[1]
@@ -354,7 +357,17 @@ function AutoEncoderTrainer:train()
                   fs2,_ = feval(nil)
                   loss = loss + fs2
                 end
-                
+
+                          collectgarbage();
+                         end --- inner for loop
+                         count = count + 1
+                         
+                        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
+                            torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
+                        end  
+                            
+                        out = nil
+                           end    --- outer for loop
 
    end -- End of while loop
 
