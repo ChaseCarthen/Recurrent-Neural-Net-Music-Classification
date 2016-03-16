@@ -152,6 +152,7 @@ end
 -- Expecting output and target to be tables
 function AutoEncoderTrainer:UpdateAccuracy(output,target)
   for i = 1, #output do
+    --print(output[i]:max())
     local out = output[i]:clone():round()
     local tar = target[i]:clone():round()
     -- Calculate false negatives

@@ -28,9 +28,9 @@ print(data.samplerate)
 join = nn.JoinTable(1)
 print(data.audio:sum())
 model = torch.load('./train.model')
-auto = torch.load('./auto.model')
+--auto = torch.load('./auto.model')
 
-data2 = data.audio:float():split(100)
+data2 = image.minmax{tensor=data.audio:float()}:split(1000)[1]:split(100)
 out = {}
 
 
