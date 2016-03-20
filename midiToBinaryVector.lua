@@ -293,8 +293,8 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
   totalduration = (endtime - starttime) / 1000
   print("==========================")
   print(data:size())
-  print(totalduration)
-  print(1.0/samplerate*data:size(1))
+  print("Total Duration: " .. totalduration)
+  print("Sample Rate Duration: " .. 1.0/samplerate*data:size(1))
   print(data:size(1))
   print("==========================")
 
