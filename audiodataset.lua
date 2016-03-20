@@ -127,11 +127,13 @@ function audiodataset:loadIntoSpectrogram(windowSize,stride)
 	end
 	totaltime = self.audio:size(1) * 1.0/self.samplerate
 	self.numsamples = self.audio:size(1)
+	print("TOTALTIME: " .. totaltime)
 	self.audio = audio.spectrogram(self.audio,windowSize,'hann',stride)
-	self.samplerate = (windowSize / self.samplerate) * (stride/windowSize)--self.audio:size(2) / totaltime
-	self.samplerate = 1.0 / self.samplerate
+	self.samplerate = self.audio:size(2) / totaltime--(windowSize / self.samplerate) * (stride/windowSize)--
+	--self.samplerate = 1.0 / self.samplerate
 	print ("SAMPLERATE: " .. self.samplerate .. "===========================================")
 
+	
 	--print(self.audio:size())
 	collectgarbage()
 	return true

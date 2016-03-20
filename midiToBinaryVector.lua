@@ -216,9 +216,10 @@ local max = 10
 -- This variabe keeps track of the current notes
 local notes = {}
 iteration = 0
-
+--print(midi.midi2opus(t))
 -- Concert the read in midi to a score object
-m = midi.opus2score(midi.to_millisecs(midi.midi2opus(t)))
+m = midi.midi2ms_score(t)--midi.opus2score(midi.to_millisecs(midi.midi2opus(t)))
+--print(m)
 for k, v in pairs(m) 
 do 
   if type(v)=="table" then
@@ -298,6 +299,9 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
   print(data:size(1))
   print("==========================")
 
+  if totalduration > 1.0/samplerate*data:size(1) then
+    error("Error midi is greater than actual duration.")
+  end
   currenttime = 0
   local binVector = torch.ByteTensor(128,data:size(1)):zero()
   --print(data:size())
