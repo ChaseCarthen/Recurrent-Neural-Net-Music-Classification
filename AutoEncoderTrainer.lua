@@ -206,7 +206,7 @@ function AutoEncoderTrainer:train()
 
    while not done do
     data = self.datasetLoader:loadNextSet()
-    
+    collectgarbage();
    	done = data.done
     local prevout = nil
 
@@ -323,9 +323,9 @@ function AutoEncoderTrainer:train()
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
-                           if not self.TrainAuto then
-                            err = err/ input[1]:size(1)
-                           end
+                           --if not self.TrainAuto then
+                           -- err = err/ input[1]:size(1)
+                           --end
                             f = f + err --/ input[1]:size(1) --/ (#input*input[1]:size(1))
 
                            

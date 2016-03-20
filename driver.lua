@@ -153,7 +153,7 @@ if not params.autoencoder and not params.encoded then
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
 serialize = params.serialize,epochrecord = params.epochrecord,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict,
-stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv}
+stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv, normalize = params.normalize}
 else
 
   train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,

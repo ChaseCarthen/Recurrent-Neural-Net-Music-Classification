@@ -64,6 +64,7 @@ function Trainer:__init(args)
   self.temporalconv = args.temporalconv
   self.stepsize = args.stepsize or 1
   self.windowidth = args.windowidth or 1000
+  self.normalize = args.normalize
 end
 
 function Trainer:splitData(data)
@@ -87,13 +88,46 @@ function Trainer:splitData(data)
     input = input:sub(1,40000-1)
     target = target:sub(2,40000)
   end
-  input = image.minmax{tensor=input}:split(self.dataSplit)
+
+  if self.normalize then
+    input = image.minmax{tensor=input}
+  end
+
+  input = input:split(self.dataSplit)
   target = target:split(self.dataSplit) 
   --print(input)  
   return input,target
 end
 
+-- Expecting output and target to be tables
+function Trainer:UpdateAccuracy(output,target)
+  for i = 1, #output do
+    --print(output[i]:max())
+    local out = output[i]:clone():round()
+    local tar = target[i]:clone():round()
+    -- Calculate false negatives
+    self.fn = self.fn + (tar - out):eq(1):sum()
+
+    -- Calculate false positivess
+    self.fp = self.fp + (tar - out):eq(-1):sum()
+
+    -- calculate true positives
+    self.tp = self.tp + (tar + out):eq(2):sum()
+
+    -- calculate true negatives
+    self.tn  = self.tn + (tar + out):eq(0):sum()
+  end
+  --print(self.fn)
+  --print(self.tn)
+  --print(self.fp)
+  --print(self.tp)
+end
+
 function Trainer:train()
+    self.fn = 0
+  self.fp = 0
+  self.tn = 0
+  self.tp = 0
 
    -- epoch tracker
    self.epoch = self.epoch or 1
@@ -119,115 +153,108 @@ function Trainer:train()
    done = false
    loss = 0
    count = 0
+
    while not done do
     data = self.datasetLoader:loadNextSet()
-    
+    collectgarbage();
     done = data.done
     local prevout = nil
+
+
+   -- evaluate function for complete mini batch
+   for i = 1,#data do
+
+    xlua.progress(i, #data)
+
+   inputs,target = self:splitData(data[i])
+   local out = {}
+   for testl = 1,#inputs do
+
+    if testl == 1 then
+      prevout = nil
+    end
+
+    input = inputs[testl]:split(self.sequenceSplit)
+
+    if self.predict and prevout ~= nil then
+      input = prevout
+    end
+      t = target[testl]:split(self.sequenceSplit)
+      --print("windowidth" .. self.windowidth)
+      --print("stepsize" .. self.stepsize)
+      
+
+    --print(input)
+    --print(t)
+    --print(self.temporalconv)
+    --print("=====================================================================================================")
+    -- Making sure the last split has the proper size for passing into a sequencer element.
+    if testl == #inputs  then
+      if t[#t]:size(1) ~= self.sequenceSplit then
+        t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
+        if self.predict == false or prevout == nil then
+          input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
+        end
+      end
+    end
+    if self.predict and #input ~= #t then
+      for ij = #input,#t,-1 do
+        input[ij] = nil
+      end
+    end
+
+    if self.temporalconv then
+      for i=1,#t do
+        t[i] = TemporalSplit(t[i], self.windowidth, self.stepsize)[1]
+      end
+    end
+
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
+                          -- f is the average of all criterions
+                          local f = 0
+
                            -- get new parameters
                            if self.training then
                             if x ~= self.model:getParameters() then
                               print (x)
                               self.model:getParameters():copy(x)
                             end
+                            --print("CLEAR")
                             --print (self.model)
                             -- reset gradients
                             self.model:getGradParameters():zero()
 
                           end
 
-                           -- f is the average of all criterions
-                           local f = 0
-                           -- evaluate function for complete mini batch
-                           for i = 1,#data do
-
-                            xlua.progress(i, #data)
-
-                           inputs,target = self:splitData(data[i])
-                           local out = {}
-                           for testl = 1,#inputs do
-
-                            if testl == 1 then
-                              prevout = nil
-                            end
-
-                            input = inputs[testl]:split(self.sequenceSplit)
-
-                            if self.predict and prevout ~= nil then
-                              input = prevout
-                            end
-                              t = target[testl]:split(self.sequenceSplit)
-                              --print("windowidth" .. self.windowidth)
-                              --print("stepsize" .. self.stepsize)
-                              
-
-                            --print(input)
-                            --print(t)
-                            --print(self.temporalconv)
-                            --print("=====================================================================================================")
-                            -- Making sure the last split has the proper size for passing into a sequencer element.
-                            if testl == #inputs  then
-                              if t[#t]:size(1) ~= self.sequenceSplit then
-                                t[#t] = torch.cat(t[#t], torch.zeros(self.sequenceSplit - t[#t]:size(1), t[#t]:size(2) ),1 )
-                                if self.predict == false or prevout == nil then
-                                  input[#input] = torch.cat(input[#input], torch.zeros(self.sequenceSplit - input[#input]:size(1), input[#input]:size(2) ), 1 )
-                                end
-                              end
-                            end
-                            if self.predict and #input ~= #t then
-                              for ij = #input,#t,-1 do
-                                input[ij] = nil
-                              end
-                            end
-
-                            if self.temporalconv then
-                              for i=1,#t do
-                                t[i] = TemporalSplit(t[i], self.windowidth, self.stepsize)[1]
-                              end
-                            end
                            --print(t)
                            local output = self.model:forward(input)
 
                            --print(t)
-                           for os = 1,#output do
-                              --output[os] = output[os]:clone()
-                              if type(output[os]) == 'table' then
-                                 --output[os][1]:round()
-                              else
-                                 --output[os]:round()
-                              end
-                           end
+
                            prevout = output
                            if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                             out[testl] = self.join:forward(output):clone():round()
-                           end
+                           end 
 
                           local err = self.model:backward(input,output,t)--inputs)
+                          self:UpdateAccuracy(output,t)
+                          --err = err / input[1]:size(1)
                            f = f + err
                            
                           
-                        collectgarbage();
-                         end
-                         count = count + 1
-                         
-                        if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
-                            torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
-                        end  
-                            
-                        out = nil
-                           end
+
 
                            -- normalize gradients and f(X)
                            if self.training then
-                            self.model:getGradParameters():div(count)--#data)
+                            self.model:getGradParameters():div(input[1]:size(1))--#data)
                            end
-                            f = f/count--#data
+
                             --print(count)
                             return f,self.model:getGradParameters()
 
-                end
+                end -- end function
+
                 if self.training then
                   _,fs2 = self.optimModule(feval, self.model:getParameters(), self.optimState)
                   loss = loss + fs2[1]
@@ -237,16 +264,34 @@ function Trainer:train()
                 end
                 
 
+              collectgarbage();
+               end  -- end inner for loop
+               count = count + 1
+               
+              if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
+                  torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
+              end  
+                  
+              out = nil
+                 end -- end top for loop
+
    end -- End of while loop
 
-   print(loss/count)
+   print(loss)--/input[1]:size(1))
    --print(confusion)
 
    -- next epoch
    --confusion:zero()
-   self.epoch = self.epoch + 1
-
-   return (loss/count)
+   --self.epoch = self.epoch + 1
+    acc = self.tp / (self.tp + self.fn + self.fp)
+    pre = self.tp / (self.tp + self.fp)
+    rec = self.tp / (self.tp + self.fn)
+    fmeasure = (2 * pre * rec) / (pre + rec)
+    print("Accuracy: " .. acc)
+    print("Precision: " .. pre)
+    print("Recall: " .. rec)
+    print("F-Measure: " .. fmeasure)
+   return loss
 end
 
 function Trainer:done()
