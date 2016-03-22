@@ -18,11 +18,12 @@
 
   encoder = nn.Sequential()
 
-  encoder:add(nn.FastLSTM(1281,500))
+  encoder:add(nn.Linear(1281,500))
   encoder:add(nn.Sigmoid())
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential():add(nn.Linear(500,1281))
   decoder = nn.Sequencer(decoder)
+  print(decoder)
   params.modelfile = params.autoencoderfile
   
   --print(encoder)

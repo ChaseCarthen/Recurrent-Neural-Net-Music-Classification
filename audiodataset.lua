@@ -100,7 +100,7 @@ function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,strid
 	if not self:loadIntoSpectrogram(windowSize,stride) then
 		return false
 	end
-	okay,self.audio,self.midi,self.samplerate = pcall(generateMidiSpectrogramVector,self.audio,self.samplerate,notes)
+	okay,self.audio,self.midi,self.samplerate = pcall(generateMidiSpectrogramVector,self.audio,self.samplerate,self.striderate,notes)
 	return okay
 end
 
@@ -129,8 +129,11 @@ function audiodataset:loadIntoSpectrogram(windowSize,stride)
 	self.numsamples = self.audio:size(1)
 	print("TOTALTIME: " .. totaltime)
 	self.audio = audio.spectrogram(self.audio,windowSize,'hann',stride)
-	self.samplerate = self.audio:size(2) / totaltime--(windowSize / self.samplerate) * (stride/windowSize)--
-	--self.samplerate = 1.0 / self.samplerate
+	self.striderate = (stride / self.samplerate)
+	self.striderate = 1.0 / self.striderate
+	self.samplerate = (windowSize / self.samplerate) --* (stride/windowSize)--self.audio:size(2) / totaltime
+	self.samplerate = 1.0 / self.samplerate
+
 	print ("SAMPLERATE: " .. self.samplerate .. "===========================================")
 
 	
@@ -169,6 +172,7 @@ function audiodataset:serialize(directory)
 	container["audiofile"] = self.audiofile
 	container["midifile"] = self.midifile
 	container["class"] = self.class
+	container["striderate"] = self.striderate
 
 	torch.save(paths.concat(directory,self.filename .. ".dat"),container)
 end
@@ -189,4 +193,5 @@ function audiodataset:deserialize(file)
   self.midifile = dict.midifile
   self.class = dict.class
   self.midi = dict.midi
+  self.striderate = dict.striderate
 end

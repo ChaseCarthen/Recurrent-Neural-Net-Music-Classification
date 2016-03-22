@@ -18,7 +18,7 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/NottinghamProcessed/train/ashover_simple_chords_2.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/PolinerComplete/train/bach_850MINp_align.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
@@ -61,9 +61,9 @@ out3 = join:forward(out3):clone()
 data2 = join:forward(data2):clone()
 image.save('autospectrogram.pgm',out2)
 --print("done test")
-image.save('spectrogram.pgm',image.minmax{tensor=data2})
+image.save('spectrogram.pgm',image.minmax{tensor=data2-(data2 * 1.0/data2:mean())})
 image.save('compare.pgm',image.minmax{tensor=out3})
-image.save('midi.pgm',image.minmax{tensor=data.midi})
+--image.save('midi.pgm',image.minmax{tensor=data.midi})
 --image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
 test = torch.zeros(2,2)
 

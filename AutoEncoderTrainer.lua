@@ -122,12 +122,14 @@ function AutoEncoderTrainer:splitData(data)
 		target = data.midi:float()
 	else
 		target = data.audio:float()
+    --target = data.audio:float()--:sub(1,data.audio:size(1),1281-448,1281)
 	end
 
 	if self.input == "midi" then
 		input = data.midi:float()
 	else
 		input = data.audio:float()
+    --input = data.audio:float()--:sub(1,data.audio:size(1),1281-448,1281)
 	end
   if self.predict then
     input = input:sub(1,40000-1)
@@ -137,10 +139,11 @@ function AutoEncoderTrainer:splitData(data)
     input = image.minmax{tensor=input}
     target = image.minmax{tensor=target}
   end
-
+  --print(input:size())
+  --print(target:size())
   input = input:split(self.dataSplit)
   target = target:split(self.dataSplit)
-  --print(data.audio:size())
+  
   --print(data.audiofile)
   --print(data.midi:size())
   --print(data.midifile)
@@ -287,7 +290,7 @@ function AutoEncoderTrainer:train()
                             tempinput = self.AutoEncoder:forward(1,input,false)
 
                             for i=1,#input do
-                              input[i] = input[i] - tempinput[i]
+                              input[i] = tempinput[i] - input[i]
                             end
                             --print(input)
                             output = self.model:forward(input)

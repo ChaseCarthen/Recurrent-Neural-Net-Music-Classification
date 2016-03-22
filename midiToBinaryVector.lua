@@ -284,7 +284,7 @@ end
 
 
 -- A function for generating a target vector in two forms
-function generateMidiSpectrogramVector(data,samplerate,notes)
+function generateMidiSpectrogramVector(data,samplerate,striderate,notes)
   --print "generating Target Vector"
   --data,samplerate = audio.load(filename)
   --print(data:size())
@@ -300,7 +300,7 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
   print("==========================")
 
   if totalduration > 1.0/samplerate*data:size(1) then
-    error("Error midi is greater than actual duration.")
+    --error("Error midi is greater than actual duration.")
   end
   currenttime = 0
   local binVector = torch.ByteTensor(128,data:size(1)):zero()
@@ -309,8 +309,8 @@ function generateMidiSpectrogramVector(data,samplerate,notes)
 
   for i=1,#notes do
     --print(notes[i].NoteBegin)
-    from = math.min( math.floor(notes[i].NoteBegin/1000.0 * samplerate)+1, data:size(1))
-    to = math.min ( math.floor((notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0) * samplerate)+1, data:size(1))
+    from = math.min( math.floor( math.max(notes[i].NoteBegin/1000.0 - 1.0/samplerate, 0) * striderate)+1, data:size(1))
+    to = math.min ( math.floor( math.max(notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0 - 1.0/samplerate, 0) * striderate)+1, data:size(1))
         --print(from)
       --print(to)
     for j =from,to do

@@ -164,6 +164,8 @@ layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer,
 stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv,normalize = params.normalize }
 end
 
+train:saveModel()
+
 while not train:done() do
     print("Epoch: ", train.epoch)
 
@@ -182,11 +184,11 @@ while not train:done() do
 
       validLogger:add{validerror}
       validLogger:style{"-"}
-      validLogger:plot()
+      --validLogger:plot()
     end
     trainLogger:add{trainerror,testerror}
     trainLogger:style{'-','-'}
-    trainLogger:plot()
+    --trainLogger:plot()
     if train.epoch % params.savemodel == 0 then
         --test()
         train:saveModel()
