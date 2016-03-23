@@ -61,7 +61,7 @@ out3 = join:forward(out3):clone()
 data2 = join:forward(data2):clone()
 image.save('autospectrogram.pgm',out2)
 --print("done test")
-image.save('spectrogram.pgm',image.minmax{tensor=data2-(data2 * 1.0/data2:mean())})
+image.save('spectrogram.pgm',  image.minmax{tensor=data2- data2*1/data2:mean() }:lt(.3)*255 )
 image.save('compare.pgm',image.minmax{tensor=out3})
 --image.save('midi.pgm',image.minmax{tensor=data.midi})
 --image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
@@ -81,4 +81,6 @@ test[2][2] = 1
 print("done")
 --print(out3:min())
 print(data2:min())
+
+
 --audio.save('test.wav',song,data.samplerate+50)

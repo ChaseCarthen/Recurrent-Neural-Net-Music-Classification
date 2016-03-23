@@ -50,7 +50,7 @@ miditable[x] = (a / 32) * (2 ^ ((x - 9) / 12))
 end
 
 function frequencyToBin(notefreq,samplerate,windowsize)
-	return torch.round(miditable[notefreq-1] / (samplerate/windowsize)/2 )
+	return torch.round(miditable[notefreq-1] / (samplerate/windowsize/2) )
 end
 
 if params.audiofile == "" then
@@ -60,7 +60,7 @@ end
 data,samplerate = audio.load(params.audiofile)
 automodel = torch.load(params.autoencoderfile)
 
-
+print(data:size())
 spectrogram = audio.spectrogram(data,params.windowSize,'hann',params.stride)
 
 
@@ -70,7 +70,7 @@ spectrogram = image.minmax{tensor=spectrogram:t()}
 --print(automodel.layer[1].encoder)
 
 
-songsplit = spectrogram:split(1000)
+--[[songsplit = spectrogram:split(1000)
 
 join = nn.JoinTable(1)
 
@@ -86,7 +86,7 @@ for i=1,#songsplit do
 
 	local out = automodel:forward(1,input,false )
 	for j =1,#out do
-		out[j] = (input[j] - out[j]):clone()
+		out[j] = (out[j] - input[j] ):clone()
 	end
 	--print("-------------")
 	--print(out)
@@ -96,14 +96,27 @@ for i=1,#songsplit do
 end
 
 --print(output)
+]]
 
 
+output = image.minmax{tensor=(spectrogram - spectrogram:mean())/spectrogram:std()} --join:forward(output)}
+output = image.minmax{tensor=output - output*1.0/output:mean()}
+output = image.minmax{tensor=output - output*1.0/output:mean()}
+--output = image.minmax{tensor=output - output*1.0/output:mean()}
+--output = image.minmax{tensor=(spectrogram - spectrogram:mean())/spectrogram:std()}
+--output = image.minmax{tensor=spectrogram - (spectrogram*1.0/spectrogram:std()) }--spectrogram:mean())/spectrogram:std()}
 
-output = join:forward(output)
-
-
-output = output:le(0.08)
-
+print("MAX: " .. output:max())
+print("MEAN: " .. output:mean())
+print("STD: " .. output:std())
+origoutput = output:clone()
+--output = output:le(.18)
+output = output:ge(.92)
+print("=======")
+print("MAX: " .. output:max())
+--print("MEAN: " .. output:mean())
+--print("STD: " .. output:std())
+--output = output:le(output:std() /2)
 
 notes = torch.zeros(spectrogram:size(1),128)
 
@@ -112,17 +125,21 @@ notes = torch.zeros(spectrogram:size(1),128)
 --print(spectrogram:size())
 for column= 1,spectrogram:size(1) do
 	for notefreq = 0,127 do
-		bin = spectrogram:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize) )
+		bin = spectrogram:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize))
 		--print(bin)
-		notes[column][notefreq+1] = 1-output[column][bin]
+		notes[column][notefreq+1] = output[column][bin]
 	end
 end
 
 
-image.save('testmidi.png',image.minmax{tensor=notes:round()})
+image.save('testmidi.png',image.minmax{tensor=notes}*255)
+image.save('testspectrogram.png',output)
+image.save('testspectrogram255.png',output*255)
+image.save('testospectrogram.png',origoutput)
+image.save('testospectrogram255.png',origoutput*255)
+image.save('spectrogramorig.png',spectrogram)
+
+samplerate = samplerate/params.stride
 
 
-samplerate = (1.0/samplerate * data:size(1)) / spectrogram:size(1)
-
-
-writeMidi(params.midifileout,notes:round(),1.0/samplerate*8 ,1.0/samplerate*8 )
+writeMidi(params.midifileout,notes:round(),samplerate ,samplerate )

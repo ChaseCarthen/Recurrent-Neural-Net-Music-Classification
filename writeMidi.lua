@@ -33,7 +33,7 @@ print ("write Midi ")
  local from = 0
  local counter = 3
  for j=1,128 do 
-  print(i)
+  --print(i)
  for i=1,pianoRoll:size(1) do
 
   if(pianoRoll[i][j] > 0 and not note_on)

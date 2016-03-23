@@ -93,6 +93,10 @@ function Trainer:splitData(data)
     input = image.minmax{tensor=input}
   end
 
+  input = image.minmax{tensor=(input - input:mean())/input:std()} --join:forward(output)}
+  --input = image.minmax{tensor=input - input*1.0/input:mean()}
+  --input = image.minmax{tensor=input - input*1.0/input:mean()}
+
   input = input:split(self.dataSplit)
   target = target:split(self.dataSplit) 
   --print(input)  
