@@ -92,8 +92,8 @@ function Trainer:splitData(data)
   if self.normalize then
     input = image.minmax{tensor=input}
   end
-
-  input = image.minmax{tensor=(input - input:mean())/input:std()} --join:forward(output)}
+  --input = input - input*input:mean()/input:std()
+  input = (input - input:mean())/input:std() --join:forward(output)}
   --input = image.minmax{tensor=input - input*1.0/input:mean()}
   --input = image.minmax{tensor=input - input*1.0/input:mean()}
 
