@@ -92,7 +92,7 @@ function AutoEncoderTrainer:__init(args)
 
 	self.serialize = false or args.serialize
 	self.frequency = args.frequency or 10
-	self.epochrecord = args.epochrecord or 50
+	self.epochrecord = args.epochrecord or 50 -- the amount of time we want to print note statistics
   self.predict = args.predict
 	self.modelfile = args.modelfile or "train.model"
   self.autofile = args.autofile or "auto.model"
@@ -100,6 +100,7 @@ function AutoEncoderTrainer:__init(args)
   self.layer = args.layer -- the current layer 6....
   self.TrainAuto = args.TrainAuto
 
+  print("LAYER COUNT: " .. args.layerCount)
   self.layerCount = args.layerCount
   self.temporalconv = args.temporalconv
   self.stepsize = args.stepsize or 1
@@ -122,6 +123,9 @@ function AutoEncoderTrainer:splitData(data)
 		target = data.midi:float()
 	else
 		target = data.audio:float()
+    if self.normalize then
+      target = (target - target:mean()) / target:std()
+    end
     --target = data.audio:float()--:sub(1,data.audio:size(1),1281-448,1281)
 	end
 
@@ -129,16 +133,19 @@ function AutoEncoderTrainer:splitData(data)
 		input = data.midi:float()
 	else
 		input = data.audio:float()
+    if self.normalize then
+      input = (input - input:mean()) / input:std()
+    end
     --input = data.audio:float()--:sub(1,data.audio:size(1),1281-448,1281)
 	end
   if self.predict then
     input = input:sub(1,40000-1)
     target = target:sub(2,40000)
   end
-  if self.normalize then
-    input = image.minmax{tensor=input}
-    target = image.minmax{tensor=target}
-  end
+  --if self.normalize then
+  --  input = image.minmax{tensor=input}
+  --  target = image.minmax{tensor=target}
+  --end
   --print(input:size())
   --print(target:size())
   input = input:split(self.dataSplit)
@@ -287,10 +294,13 @@ function AutoEncoderTrainer:train()
 
                            --print(t)
                            if not self.TrainAuto then
-                            tempinput = self.AutoEncoder:forward(1,input,false)
+
+                            input = self.AutoEncoder:forward(self.layerCount,input,true)
+
+                            --print(tempinput[1]:size())
 
                             for i=1,#input do
-                              input[i] = tempinput[i] - input[i]
+                              --input[i] = tempinput[i] - input[i]
                             end
                             --print(input)
                             output = self.model:forward(input)
@@ -300,6 +310,7 @@ function AutoEncoderTrainer:train()
                             if self.layer > 1 then
                               input = self.AutoEncoder:forward(self.layer - 1,input,true)
                             end
+
                             t = input
                             output = self.AutoEncoder:layerForward(self.layer,input)
                            end
@@ -322,7 +333,9 @@ function AutoEncoderTrainer:train()
                             --print(self.layer)
                             --print(input)
                             err = self.model:backward(input,output,t)--inputs)
-                            self:UpdateAccuracy(output,t)
+                            if self.epoch % self.epochrecord == 0 then
+                              self:UpdateAccuracy(output,t)
+                            end
                            else
                             err = self.AutoEncoder:backward(self.layer,input,output,t)
                            end
@@ -380,14 +393,17 @@ function AutoEncoderTrainer:train()
 
 
    if not self.TrainAuto then
-    acc = self.tp / (self.tp + self.fn + self.fp)
-    pre = self.tp / (self.tp + self.fp)
-    rec = self.tp / (self.tp + self.fn)
-    fmeasure = (2 * pre * rec) / (pre + rec)
-    print("Accuracy: " .. acc)
-    print("Precision: " .. pre)
-    print("Recall: " .. rec)
-    print("F-Measure: " .. fmeasure)
+    if self.epoch % self.epochrecord == 0 then
+      acc = self.tp / (self.tp + self.fn + self.fp)
+      pre = self.tp / (self.tp + self.fp)
+      rec = self.tp / (self.tp + self.fn)
+      fmeasure = (2 * pre * rec) / (pre + rec)
+      print("Accuracy: " .. acc)
+      print("Precision: " .. pre)
+      print("Recall: " .. rec)
+      print("F-Measure: " .. fmeasure)
+    end
+
    end
    -- next epoch
    --confusion:zero()

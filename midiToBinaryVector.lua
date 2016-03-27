@@ -295,7 +295,8 @@ function generateMidiSpectrogramVector(data,samplerate,striderate,notes)
   print("==========================")
   print(data:size())
   print("Total Duration: " .. totalduration)
-  print("Sample Rate Duration: " .. 1.0/samplerate*data:size(1))
+  print("Sample Rate Duration: " .. ( (1.0/samplerate) + (data:size(1)) * 1/striderate) ) 
+  print(samplerate)
   print(data:size(1))
   print("==========================")
 
@@ -306,13 +307,21 @@ function generateMidiSpectrogramVector(data,samplerate,striderate,notes)
   local binVector = torch.ByteTensor(128,data:size(1)):zero()
   --print(data:size())
   --print(binVector:size())
+  local sum = 0
 
   for i=1,#notes do
     --print(notes[i].NoteBegin)
-    from = math.min( math.floor( math.max(notes[i].NoteBegin/1000.0 - 1.0/samplerate, 0) * striderate)+1, data:size(1))
-    to = math.min ( math.floor( math.max(notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0 - 1.0/samplerate, 0) * striderate)+1, data:size(1))
-        --print(from)
+    from = math.max( torch.floor( math.max(notes[i].NoteBegin/1000.0, 0) * striderate)+1, 1)
+    to = math.min ( torch.round( math.max(notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0, 0) * striderate)+1, data:size(1))
+    --print("NOTE: " .. i)
+   -- print("Duration: " .. notes[i].NoteDuration/1000)
+    --print("Begin: " .. notes[i].NoteBegin/1000.0)
+    --print(1/striderate)
+      -- print(from)
       --print(to)
+     -- print(notes[i].Note)
+      sum = sum + to - from + 1
+      --print("========")
     for j =from,to do
       --print("set")
       --print(notes[i].Note)
@@ -320,6 +329,8 @@ function generateMidiSpectrogramVector(data,samplerate,striderate,notes)
     end
     --print(i)
   end
+  --print (sum)
+  --print (binVector:sum())
   return data,binVector:t(),samplerate
 end
 

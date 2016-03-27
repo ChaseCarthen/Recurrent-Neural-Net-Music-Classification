@@ -18,13 +18,13 @@ function tensorToNumber(tensor)
 end
 
 torch.setdefaulttensortype('torch.FloatTensor')
-data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/PolinerComplete/train/bach_850MINp_align.dat')
+data = torch.load('/home/ace/Documents/Recurrent-Neural-Net-Music-Classification/MiniProcessed/train/ty_januarMINp_align.dat')
 print(data.samplerate)
 join = nn.JoinTable(1)
 
 model = torch.load('./auto.model')
 
-data2 = image.minmax {tensor=data.audio:float() }:split(100)
+data2 = ((data.audio:float() -data.audio:mean())/data.audio:float():std()):split(100)
 --data3 = data.midi:float():split(10000)
 out2 = {}
 
@@ -34,7 +34,7 @@ data2[#data2] = nil
 
 print(data2)
 
-out2 = model:forward(1,data2,false)
+out2 = model:forward(model.layerCount,data2,true)
 
 for i = 1,#data2 do
 	print(data2[i]:size())
@@ -45,11 +45,11 @@ for i = 1,#data2 do
 	print("=================")
 	--image.save('test'.. i ..'.pgm',image.scale(image.minmax{tensor=out2[i]},1000,1000))
 	if i > 1 and i < #data2 then
-		print("SUM: " .. (out2[i] - out2[i-1]):sum() )
-		print("Original SUM: " .. (data2[i] - data2[i-1]):sum() )
+		--print("SUM: " .. (out2[i] - out2[i-1]):sum() )
+		--print("Original SUM: " .. (data2[i] - data2[i-1]):sum() )
 
 	end
-	out3[i] = out2[i] - data2[i]
+	--out3[i] = out2[i] - data2[i]
 	--print(out2[i])
 	--image.save('testor'.. i ..'.pgm',image.scale(image.minmax{tensor=data2[i]},1000,1000))
 	--image.save('testma'.. i ..'.pgm',image.scale(image.minmax{tensor=data3[i]},1000,1000))
@@ -59,10 +59,12 @@ end
 out2 = join:forward(out2):clone()
 out3 = join:forward(out3):clone()
 data2 = join:forward(data2):clone()
-image.save('autospectrogram.pgm',out2)
+
+print(out2:size())
+image.save('autospectrogram.pgm',image.minmax{tensor=out2} )
 --print("done test")
-image.save('spectrogram.pgm',  image.minmax{tensor=data2- data2*1/data2:mean() }:lt(.3)*255 )
-image.save('compare.pgm',image.minmax{tensor=out3})
+image.save('spectrogram.pgm',  image.minmax{tensor=data2} )
+--image.save('compare.pgm',image.minmax{tensor=out3})
 --image.save('midi.pgm',image.minmax{tensor=data.midi})
 --image.save('midi.pgm',image.scale(image.minmax{tensor=data.midi},1000,1000))
 test = torch.zeros(2,2)

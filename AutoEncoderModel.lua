@@ -18,8 +18,8 @@
 
   encoder = nn.Sequential()
 
-  encoder:add(nn.Linear(1281,500))
-  encoder:add(nn.Sigmoid())
+  encoder:add(nn.FastLSTM(1281,500))
+  encoder:add(nn.HardTanh())
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential():add(nn.Linear(500,1281))
   decoder = nn.Sequencer(decoder)
@@ -30,11 +30,22 @@
 
   ae = AutoEncoder(encoder,decoder)
   model = StackedAutoEncoder()
+
+  encoder = nn.Sequential()
+  encoder:add(nn.FastLSTM(500,100))
+  encoder:add(nn.ReLU())
+  encoder = nn.Sequencer(encoder)
+  decoder = nn.Sequential()
+  decoder:add(nn.Linear(100,500))
+  decoder = nn.Sequencer(decoder)
+  ae2 = AutoEncoder(encoder,decoder)
+
   model:AddLayer(ae)
   --model:AddLayer(ae2)
   --model:AddLayer(ae3)
   --model:AddLayer(ae4)
   layer = model:getLayerCount()
+  print("LAYER: " .. layer)
   AutoEncoderMod = model
   params.TrainAuto = true
   if(cuda) then

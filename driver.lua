@@ -34,7 +34,7 @@ cmd:text('Options')
 cmd:option("--cuda",false,"Use cuda")
 cmd:option("-data","processed","Specify the directory with data.")
 cmd:option("--serialize",false,"Serialize outputs")
-cmd:option("-epochrecord", 50, "Every nth epoch to serialize data.")
+cmd:option("-epochrecord", 10, "Every nth epoch to serialize data.")
 cmd:option("-frequency",10,"Every jth dataset is used to be serialized")
 cmd:option("-modelfile","train.model","What you wish to save this model as!")
 cmd:option("-autoencoderfile","auto.model","The autoencoder file to be used.")
@@ -108,7 +108,7 @@ dl = DatasetLoader(params.data,params.input,params.target)
 classes = dl.classes
 
 
-layer = 1
+--layer = 1
 
 print(params.rnnc)
 print(params.attention)
@@ -164,7 +164,7 @@ layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer,
 stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv,normalize = params.normalize }
 end
 
-train:saveModel()
+
 
 while not train:done() do
     print("Epoch: ", train.epoch)

@@ -13,6 +13,7 @@ require 'torchx'
 require 'audio'
 require 'midiToBinaryVector'
 require 'image'
+require 'unsup'
 
 local signal = require 'signal'
 local audiodataset = torch.class('audiodataset')
@@ -75,6 +76,7 @@ function audiodataset:loadAudioMidi(filename,wavdirectory)
 	self.audio,self.midi,self.samplerate = generateMidiTargetVector(self.audiofile,notes)
 	self.file = wavdirectory .. "/" .. filebase 
 	self.audio = applyToTensor(self.audio:t()[1])
+	--self.audio:t()
 	return true
 end
 
@@ -101,6 +103,9 @@ function audiodataset:loadMidiSpectrogram(filename,wavdirectory,windowSize,strid
 		return false
 	end
 	okay,self.audio,self.midi,self.samplerate = pcall(generateMidiSpectrogramVector,self.audio,self.samplerate,self.striderate,notes)
+	
+	--print("AUDIO SIZE: ")
+	--print(self.audio:size())
 	return okay
 end
 
@@ -133,6 +138,9 @@ function audiodataset:loadIntoSpectrogram(windowSize,stride)
 	self.striderate = 1.0 / self.striderate
 	self.samplerate = (windowSize / self.samplerate) --* (stride/windowSize)--self.audio:size(2) / totaltime
 	self.samplerate = 1.0 / self.samplerate
+
+	--self.audio = (self.audio - self.audio:mean())/self.audio:std()
+	
 
 	print ("SAMPLERATE: " .. self.samplerate .. "===========================================")
 

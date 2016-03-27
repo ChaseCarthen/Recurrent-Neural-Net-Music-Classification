@@ -34,6 +34,7 @@ print ("write Midi ")
  local counter = 3
  for j=1,128 do 
   --print(i)
+  note_on = false
  for i=1,pianoRoll:size(1) do
 
   if(pianoRoll[i][j] > 0 and not note_on)
@@ -55,6 +56,10 @@ print ("write Midi ")
   end 
 end
  end
+
+
+ print("COUNTER: " .. counter)
+
  local midifile = assert(io.open(fileName,'w'))
  --print(my_score)
  midifile:write(MIDI.score2midi(my_score))
