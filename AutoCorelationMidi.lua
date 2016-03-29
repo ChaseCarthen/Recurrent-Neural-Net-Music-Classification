@@ -64,13 +64,13 @@ data,samplerate = audio.load(params.audiofile)
 
 print(data:size())
 spectrogram = audio.spectrogram(data,params.windowSize,'hann',params.stride)
-
+spectrogram = spectrogram:t()
 
 if params.model then
 	print("USING MODEL")
 	automodel = torch.load(params.autoencoderfile)
 	trainmodel = torch.load(params.rnncfile)
-	spectrogram = spectrogram:t()
+
 	spectrogram = (spectrogram - spectrogram:mean()) / spectrogram:std()
 	--print(spectrogram:size())
 	--print(automodel.layer[1].encoder)
@@ -118,6 +118,8 @@ elseif params.corelate then
 	origoutput = output:clone()
 	--output = output:le(.18)
 	output = output:ge(.93)
+    print("SAVING IMAGE")
+    image.save('out.png',image.minmax{tensor=output})
 	print("=======")
 	print("MAX: " .. output:max())
 	--print("MEAN: " .. output:mean())
@@ -129,16 +131,17 @@ elseif params.corelate then
 
 		for notefreq = 0,127 do
 			bin =  spectrogram:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize)) --spectrogram:size(2) -
-			print("INFO==============")
-			print(notefreq)
-			print(miditable[notefreq])
-			print(bin)
-			print(spectrogram:size())
+			--print("INFO==============")
+			--print(notefreq)
+			--print(miditable[notefreq])
+			--print(bin)
+			--print(spectrogram:size())
 		end
 
 
 	--print(samplerate)
-	--print(spectrogram:size())
+	print(spectrogram:size())
+    print(notes:size())
 	for column= 1,spectrogram:size(1) do
 		for notefreq = 0,118 do
 			bin =  spectrogram:size(2) - math.floor(miditable[notefreq] / (samplerate/windowsize)) --spectrogram:size(2) -
@@ -150,5 +153,5 @@ end --end correlate if
 
 samplerate = samplerate/params.stride
 
-
+image.save('outmidi.png',image.minmax{tensor=notes})
 writeMidi(params.midifileout,notes:round(),samplerate ,samplerate )
