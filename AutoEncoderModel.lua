@@ -19,7 +19,7 @@
   encoder = nn.Sequential()
 
   encoder:add(nn.FastLSTM(1281,500))
-  encoder:add(nn.HardTanh())
+  encoder:add(nn.ReLU())
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential():add(nn.Linear(500,1281))
   decoder = nn.Sequencer(decoder)
@@ -32,11 +32,11 @@
   model = StackedAutoEncoder()
 
   encoder = nn.Sequential()
-  encoder:add(nn.FastLSTM(500,100))
-  encoder:add(nn.ReLU())
+  encoder:add(nn.FastLSTM(500,300))
+  encoder:add(nn.Tanh())
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential()
-  decoder:add(nn.Linear(100,500))
+  decoder:add(nn.Linear(300,500))
   decoder = nn.Sequencer(decoder)
   ae2 = AutoEncoder(encoder,decoder)
 
