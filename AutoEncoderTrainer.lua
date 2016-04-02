@@ -129,6 +129,7 @@ function AutoEncoderTrainer:splitData(data)
     --target = data.audio:float()--:sub(1,data.audio:size(1),1281-448,1281)
 	end
 
+  --print (data.audio:max())
 	if self.input == "midi" then
 		input = data.midi:float()
 	else
@@ -265,7 +266,7 @@ function AutoEncoderTrainer:train()
 
               -- create closure to evaluate f(X) and df/dX
               local feval = function(x)
-                          count = 0
+                          --count = 0
                            -- get new parameters
                            if self.training then
                             if not self.TrainAuto then
@@ -298,10 +299,6 @@ function AutoEncoderTrainer:train()
                             input = self.AutoEncoder:forward(self.layerCount,input,true)
 
                             --print(tempinput[1]:size())
-
-                            for i=1,#input do
-                              --input[i] = tempinput[i] - input[i]
-                            end
                             --print(input)
                             output = self.model:forward(input)
                             --print(output[1][1]:max())
@@ -376,8 +373,9 @@ function AutoEncoderTrainer:train()
                 end
 
                           collectgarbage();
+                          count = count + 1
                          end --- inner for loop
-                         count = count + 1
+                         
                          
                         if self.epoch % self.epochrecord == 0 and count % self.frequency == 0 and self.serialize then
                             torch.save("train" .. count .. "epoch" .. self.epoch .. ".dat",out)
@@ -389,6 +387,7 @@ function AutoEncoderTrainer:train()
    end -- End of while loop
 
    print("LOSS: " .. loss)--/count)
+  --print(count)
    --print(confusion)
 
 
@@ -402,6 +401,7 @@ function AutoEncoderTrainer:train()
       print("Precision: " .. pre)
       print("Recall: " .. rec)
       print("F-Measure: " .. fmeasure)
+      return loss,acc,pre,rec,fmeasure
     end
 
    end

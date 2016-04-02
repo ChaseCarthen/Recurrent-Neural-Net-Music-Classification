@@ -9,16 +9,18 @@ cmd:option("--spectrogram",false,"Processing for spectrogram")
 cmd:option('-m',"","Process midi data")
 cmd:option('-d',"audio","Data directory to process.")
 cmd:option('-o',"processed","Processed data directory.")
-cmd:option("-r",.8,"Train Split Rate")
-cmd:option("-r2",.1,"Validation Split Rate")
+cmd:option("-r",.7,"Train Split Rate")
+cmd:option("-r2",.2,"Validation Split Rate")
 cmd:option("-r3",.1,"Test Split Rate")
 cmd:option("-windowSize",8092,"Window size for spectrogram.")
 cmd:option("-stride",512,"spectrogram stride size")
+cmd:option("--normalize",false,"WIll statistically normalize the audio.")
 cmd:text()
 
 params = cmd:parse(arg or {})
 directory = params.d
 print (params.o)
+--print (params.normalize)
 trainsplit = params.r
 validsplit = params.r2
 testsplit = params.r3
@@ -122,6 +124,10 @@ if directory ~= nil then
             else
                status = ad:loadIntoSpectrogram(params.windowSize,params.stride)
                ad.audio = ad.audio:t()
+            end
+
+            if params.normalize then
+                ad.audio = (ad.audio - ad.audio:mean())/ad.audio:std()
             end
         end
         

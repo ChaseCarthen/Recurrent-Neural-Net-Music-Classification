@@ -41,6 +41,7 @@ cmd:option("-stride",1280,"Setting the stride for the window.")
 cmd:option("-midifileout","test.mid","Use this parameter to specify the midi output.")
 cmd:option("--corelate",true,"Use auto correlation.")
 cmd:option("--model",false,"Use the lovely model.")
+cmd:option("--autoencoder",true,"Use the autoencoder model.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -66,8 +67,8 @@ print(data:size())
 spectrogram = audio.spectrogram(data,params.windowSize,'hann',params.stride)
 spectrogram = spectrogram:t()
 
-if params.model then
-	print("USING MODEL")
+if params.model and params.autoencoder then
+	print("USING Encoded MODEL")
 	automodel = torch.load(params.autoencoderfile)
 	trainmodel = torch.load(params.rnncfile)
 
@@ -103,6 +104,40 @@ if params.model then
 -- end of model if
 --print(output)
 
+elseif params.model then
+	print("USING MODEL")
+	--automodel = torch.load(params.autoencoderfile)
+	trainmodel = torch.load(params.rnncfile)
+
+	spectrogram = (spectrogram - spectrogram:mean()) / spectrogram:std()
+	--print(spectrogram:size())
+	--print(automodel.layer[1].encoder)
+
+
+	songsplit = spectrogram:split(1000)
+
+	join = nn.JoinTable(1)
+
+	local output = {}
+	for i=1,#songsplit do
+		--print(i)
+		local input = songsplit[i]:split(100)
+		--print(input)
+
+		if input[#input]:size(1) ~= 100 then
+			input[#input] = torch.cat(input[#input], torch.zeros(100 - input[#input]:size(1), input[#input]:size(2) ), 1 )
+		end
+
+		out = trainmodel:forward(input)
+		--print("-------------")
+		--print(out)
+		output[#output +1] = join:forward(out):clone()
+		--print("-------------output")
+		--print(output)
+	end
+	notes = join:forward(output)
+
+-- end of model if
 
 elseif params.corelate then
 	output = image.minmax{tensor=(spectrogram - spectrogram:mean())/spectrogram:std()} --join:forward(output)}

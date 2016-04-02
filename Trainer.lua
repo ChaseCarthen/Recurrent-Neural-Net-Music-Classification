@@ -243,7 +243,9 @@ function Trainer:train()
                            end 
 
                           local err = self.model:backward(input,output,t)--inputs)
-                          self:UpdateAccuracy(output,t)
+                          if self.epoch % self.epochrecord == 0 then
+                            self:UpdateAccuracy(output,t)
+                          end
                           --err = err / input[1]:size(1)
                            f = f + err
                            
@@ -288,14 +290,17 @@ function Trainer:train()
    -- next epoch
    --confusion:zero()
    --self.epoch = self.epoch + 1
-    acc = self.tp / (self.tp + self.fn + self.fp)
-    pre = self.tp / (self.tp + self.fp)
-    rec = self.tp / (self.tp + self.fn)
-    fmeasure = (2 * pre * rec) / (pre + rec)
-    print("Accuracy: " .. acc)
-    print("Precision: " .. pre)
-    print("Recall: " .. rec)
-    print("F-Measure: " .. fmeasure)
+    if self.epoch % self.epochrecord == 0 then 
+      acc = self.tp / (self.tp + self.fn + self.fp)
+      pre = self.tp / (self.tp + self.fp)
+      rec = self.tp / (self.tp + self.fn)
+      fmeasure = (2 * pre * rec) / (pre + rec)
+      print("Accuracy: " .. acc)
+      print("Precision: " .. pre)
+      print("Recall: " .. rec)
+      print("F-Measure: " .. fmeasure)
+      return loss,acc,pre,rec,fmeasure
+    end
    return loss
 end
 

@@ -22,7 +22,7 @@ require 'Model/AutoEncoder'
 require 'Model/BinaryClassReward'
 require 'AutoEncoderTrainer'
 require 'Model/StackedAutoEncoder'
-
+require 'paths'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
@@ -34,7 +34,7 @@ cmd:text('Options')
 cmd:option("--cuda",false,"Use cuda")
 cmd:option("-data","processed","Specify the directory with data.")
 cmd:option("--serialize",false,"Serialize outputs")
-cmd:option("-epochrecord", 10, "Every nth epoch to serialize data.")
+--cmd:option("-epochrecord", 10, "Every nth epoch to serialize data.")
 cmd:option("-frequency",10,"Every jth dataset is used to be serialized")
 cmd:option("-modelfile","train.model","What you wish to save this model as!")
 cmd:option("-autoencoderfile","auto.model","The autoencoder file to be used.")
@@ -55,6 +55,7 @@ cmd:option("--temporalconv",false,"Use temporal convolution.")
 cmd:option("--normalize",false,"Normalize input data into the model.")
 cmd:option("-GPU",1,"The GPU number to use.")
 cmd:option("-model","","The Lua file that contains your script file.")
+cmd:option("-logname","out","Specifies a common name for log files.")
 cmd:text()
 
 params = cmd:parse(arg or {})
@@ -93,6 +94,8 @@ end
 
 local math = require 'math'
 
+
+paths.mkdir(paths.concat(paths.cwd(),"logs"))
 
 --Step 1: Gather our training and testing data - trainData and testData contain a table of Songs and Labels
 trainData = {}
@@ -134,12 +137,25 @@ model:initParameters()
 local dated = os.date()
 
 -- Add a datetime to this output later
-trainLogger = optim.Logger('traintestGPU' .. params.GPU .. dated ..  '.log')
+logpath = paths.concat(paths.cwd(),"logs",params.logname .. dated)
+paths.mkdir(logpath)
+logpath = logpath .. "/"
+print('traintest' .. params.data .. dated ..  '.log')
+print(params.logname)
+trainLogger = optim.Logger(logpath .. 'traintest' .. params.logname .. dated ..  '.log')
 trainLogger:setNames{'training error', 'test error'}
 
-validLogger = optim.Logger('validGPU' .. params.GPU .. dated ..  '.log')
+validLogger = optim.Logger(logpath .. 'valid' .. params.logname .. dated ..  '.log')
 validLogger:setNames{'valid error'}
 
+trainAccLogger = optim.Logger(logpath .. 'trainacc' .. params.logname .. dated ..  '.log')
+trainAccLogger:setNames{"acc","pre","rec","fmeasure"}
+
+testAccLogger = optim.Logger(logpath .. 'testacc' .. params.logname .. dated ..  '.log')
+testAccLogger:setNames{"acc","pre","rec","fmeasure"}
+
+validAccLogger = optim.Logger(logpath .. 'validacc' .. params.logname .. dated ..  '.log')
+validAccLogger:setNames{"acc","pre","rec","fmeasure"}
 
 if params.encoded then
   AutoEncoderMod = torch.load(params.autoencoderfile)
@@ -151,14 +167,14 @@ end
 if not params.autoencoder and not params.encoded then
   train = Trainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.rmsprop, optimState = optimState, target = params.target,input = params.input,
-serialize = params.serialize,epochrecord = params.epochrecord,
+serialize = params.serialize,epochrecord = params.savemodel,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict,
 stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv, normalize = params.normalize}
 else
 
   train = AutoEncoderTrainer{dataSplit = params.dataSplit, sequenceSplit = params.sequenceSplit, epochLimit = params.epochLimit, model = model, datasetLoader = dl,
 optimModule = optim.adadelta, optimState = optimState, target = params.target,input = params.input,
-serialize = params.serialize,epochrecord = params.epochrecord,
+serialize = params.serialize,epochrecord = params.savemodel,
 frequency = params.frequency, modelfile = params.modelfile, epochLimit = params.epochLimit, predict = params.predict, TrainAuto = params.TrainAuto, 
 layerCount = layer, AutoEncoder = AutoEncoderMod, layer = params.layer,
 stepsize = params.stepsize, windowidth = params.windowsize, temporalconv = params.temporalconv,normalize = params.normalize }
@@ -174,17 +190,29 @@ while not train:done() do
     --train()
     --train:saveModel()
     print("======= train ======")
-    local trainerror = train:trainer()
+    local trainerror,trainacc,trainpre,trainrec,trainfmeasure = train:trainer()
+
     print("======= test =======")
-    local testerror = train:tester()
+    local testerror,testacc,testpre,testrec,testfmeasure = train:tester()
     local validerror = 0
     if train.epoch % params.savemodel == 0 then
       print("====== valid ========")
-      validerror = train:validater()
+      validerror,valacc,valpre,valrec,valfmeasure = train:validater()
+
+      -- Log Accuracy -- This is important...
+      validAccLogger:add{valacc,valpre,valrec,valfmeasure}
+      validAccLogger:style{"-","-","-","-"}
+
+      trainAccLogger:add{trainacc,trainpre,trainrec,trainfmeasure}
+      trainAccLogger:style{"-","-","-","-"}
+
+      testAccLogger:add{testacc,testpre,testrec,testfmeasure}
+      testAccLogger:style{"-","-","-","-"}
 
       validLogger:add{validerror}
       validLogger:style{"-"}
       --validLogger:plot()
+
     end
     trainLogger:add{trainerror,testerror}
     trainLogger:style{'-','-'}
