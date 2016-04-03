@@ -15,7 +15,7 @@
   model = RNNC() 
 
   inmodel = nn.Sequential()
-  inmodel:add(nn.FastLSTM(1281,200))
+  inmodel:add(nn.GRU(500,200))
   inmodel:add(nn.Tanh())
   --inmodel:add(nn.FastLSTM(500,200))
   --inmodel:add(nn.GradientReversal())

@@ -61,13 +61,13 @@ function DatasetLoader:__init(datadir,input,target)
 	end
 
 	for i in paths.iterfiles(paths.concat(datadir,"test")) do
-		self.validcount = self.validcount + 1
-		self.valid[self.validcount] = paths.concat(datadir,"test",i)
+		self.testcount = self.testcount + 1
+		self.test[self.testcount] = paths.concat(datadir,"test",i)
 	end
 
 	for i in paths.iterfiles(paths.concat(datadir,"valid")) do
-		self.testcount = self.testcount + 1
-		self.test[self.testcount] = paths.concat(datadir,"valid",i)
+		self.validcount = self.validcount + 1
+		self.valid[self.validcount] = paths.concat(datadir,"valid",i)
 	end
 	
 	self.loadlist = {}

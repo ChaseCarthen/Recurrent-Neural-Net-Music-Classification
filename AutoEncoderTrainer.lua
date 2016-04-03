@@ -202,11 +202,11 @@ function AutoEncoderTrainer:train()
    numTrain = self.datasetLoader:numberOfTrainingSamples() 
    elseif self.validate then
     self.datasetLoader:loadValidation()
-    numTrain = self.datasetLoader:numberOfTestSamples()
+    numTrain = self.datasetLoader:numberOfValidSamples()
    else
     self.datasetLoader:loadTesting()
-
-    numTrain = self.datasetLoader:numberOfValidSamples()
+    numTrain = self.datasetLoader:numberOfTestSamples()
+    
    end
 
    
@@ -373,7 +373,7 @@ function AutoEncoderTrainer:train()
                 end
 
                           collectgarbage();
-                          count = count + 1
+                          --count = count + 1
                          end --- inner for loop
                          
                          

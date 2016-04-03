@@ -18,7 +18,7 @@
 
   encoder = nn.Sequential()
 
-  encoder:add(nn.FastLSTM(1281,500))
+  encoder:add(nn.GRU(1281,500))
   encoder:add(nn.ReLU())
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential():add(nn.Linear(500,1281))
@@ -37,6 +37,7 @@
   encoder = nn.Sequencer(encoder)
   decoder = nn.Sequential()
   decoder:add(nn.Linear(300,500))
+  decoder:add(nn.Tanh())
   decoder = nn.Sequencer(decoder)
   ae2 = AutoEncoder(encoder,decoder)
 

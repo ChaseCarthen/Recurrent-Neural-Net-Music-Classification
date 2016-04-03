@@ -145,6 +145,9 @@ if directory ~= nil then
             end
             collectgarbage()
             print("DONE")
+            print(numTrain)
+            print(numTest)
+            print(numValidation)
         else
             print("NOT LOADING")
         end
