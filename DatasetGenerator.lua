@@ -126,7 +126,7 @@ if directory ~= nil then
                ad.audio = ad.audio:t()
             end
 
-            if params.normalize then
+            if status and params.normalize then
                 ad.audio = (ad.audio - ad.audio:mean())/ad.audio:std()
             end
         end

@@ -77,7 +77,7 @@ if params.model and params.autoencoder then
 	--print(automodel.layer[1].encoder)
 
 
-	songsplit = spectrogram:split(1000)
+	songsplit = spectrogram:split(6000)
 
 	join = nn.JoinTable(1)
 

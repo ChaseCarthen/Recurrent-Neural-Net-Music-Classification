@@ -15,8 +15,8 @@
   model = RNNC() 
 
   inmodel = nn.Sequential()
-  inmodel:add(nn.GRU(500,200))
-  inmodel:add(nn.Tanh())
+  inmodel:add(nn.GRU(500,300))
+  --inmodel:add(nn.Tanh())
   --inmodel:add(nn.FastLSTM(500,200))
   --inmodel:add(nn.GradientReversal())
   --inmodel:add(nn.Dropout())
@@ -27,7 +27,7 @@
     model:addlayer(nn.Sequencer(nn.TemporalConvolution(80,36,params.windowsize,params.stepsize ) ))
   end
   --model:addlayer(nn.Sequencer(nn.GRU(1000,80)))
-  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(200,128)):add(nn.Sigmoid()) ))
+  model:addlayer(nn.Sequencer(nn.Sequential():add(nn.Linear(300,128)):add(nn.Sigmoid()) ))
   --model:addlayer(nn.Sequencer(nn.Sigmoid()))
    if(cuda) then
   	model:cudaify('torch.FloatTensor')       

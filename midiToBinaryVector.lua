@@ -311,7 +311,7 @@ function generateMidiSpectrogramVector(data,samplerate,striderate,notes)
 
   for i=1,#notes do
     --print(notes[i].NoteBegin)
-    from = math.max( torch.floor( math.max(notes[i].NoteBegin/1000.0 - 1.0 / samplerate, 0) * striderate)+1, 1)
+    from = math.max( torch.floor( math.max(notes[i].NoteBegin/1000.0, 0) * striderate)+1, 1)
     to = math.min ( torch.round( math.max(notes[i].NoteBegin/1000.0 + notes[i].NoteDuration/1000.0, 0) * striderate)+1, data:size(1))
     --print("NOTE: " .. i)
    -- print("Duration: " .. notes[i].NoteDuration/1000)
