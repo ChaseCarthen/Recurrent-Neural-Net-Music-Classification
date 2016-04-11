@@ -23,6 +23,7 @@ require 'Model/BinaryClassReward'
 require 'AutoEncoderTrainer'
 require 'Model/StackedAutoEncoder'
 require 'paths'
+require 'json'
 
 torch.setdefaulttensortype('torch.FloatTensor')
 cmd = torch.CmdLine()
@@ -56,9 +57,25 @@ cmd:option("--normalize",false,"Normalize input data into the model.")
 cmd:option("-GPU",1,"The GPU number to use.")
 cmd:option("-model","","The Lua file that contains your script file.")
 cmd:option("-logname","out","Specifies a common name for log files.")
+cmd:option("-jsonfile","","Load a json file.")
 cmd:text()
 
+
+
 params = cmd:parse(arg or {})
+
+
+if params.jsonfile then
+  okay,parameters = pcall(json.load,params.jsonfile)
+  if okay then 
+    for k,v in pairs(parameters) do
+      params[k] = v
+    end
+  else
+    print("Json file not valid!!!!")
+  end
+end
+
 cuda = params.cuda
 
 if params.model == "" then
@@ -86,10 +103,11 @@ then
 	print("CUNN")
   require 'cutorch'
 	require 'cunn'
-  if cutorch.getDeviceCount() > params.GPU or params.GPU < 1 then
+  if cutorch.getDeviceCount() < params.GPU or params.GPU < 1 then
     params.GPU = 1
   end
   cutorch.setDevice(params.GPU)
+  print("USING GPU: " .. params.GPU)
 end
 
 local math = require 'math'
@@ -137,7 +155,7 @@ model:initParameters()
 local dated = os.date()
 
 -- Add a datetime to this output later
-logpath = paths.concat(paths.cwd(),"logs",params.logname .. dated)
+logpath = paths.concat(paths.cwd(),"logs",params.logname .. dated .. "gpu" .. params.GPU)
 paths.mkdir(logpath)
 logpath = logpath .. "/"
 print('traintest' .. params.data .. dated ..  '.log')

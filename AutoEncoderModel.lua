@@ -7,7 +7,7 @@
     print("CUNN")
     require 'cutorch'
     require 'cunn'
-    if cutorch.getDeviceCount() > params.GPU or params.GPU < 1 then
+    if cutorch.getDeviceCount() < params.GPU or params.GPU < 1 then
       params.GPU = 1
     end
     cutorch.setDevice(params.GPU)

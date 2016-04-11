@@ -223,8 +223,8 @@ function AutoEncoderTrainer:train()
 
                                -- evaluate function for complete mini batch
                            for i = 1,#data do
-
-                            xlua.progress(i, #data)
+                            count  = count + 1
+                            xlua.progress(count, numTrain)
 
                            inputs,target = self:splitData(data[i])
                            local out = {}
